@@ -3,6 +3,9 @@
 TSG, short for Tiny Site Generator, is an opinionated
 bare minimum site generator with localization support for all files.
 
+> **WARNING**: this tool is still unstable, under active development and incomplete.
+> You advised to not use TSG yet in any of your own products for anything else besides experimentation!
+
 What does TSG allow you to do:
 
 - generate a static HTML website;

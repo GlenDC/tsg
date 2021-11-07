@@ -1,4 +1,6 @@
-# Tiny Site Generator
+<p align="center">
+  <img src="docs/images/banner.svg" alt="TSG banner image"/>
+</p>
 
 TSG, short for Tiny Site Generator, is an opinionated
 bare minimum site generator with localization support for all files.

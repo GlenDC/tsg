@@ -5,24 +5,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-        example: <include>$.title</include>
+        <include>$.title</include>
     </title>
-    <link rel="stylesheet" href="main.css"> 
 </head>
 
 <body>
     <div>
         <div class="header">
-            <h1>Hello World!</h1>
-            <p class="subheader">"a website with a custom layout built using TSG"</p>
+            <include>header</include>
         </div>
 
         <div class="main">
             <include>$.content</include>
-        </div>
-
-        <div class="footer">
-            <include>footer</include>
         </div>
     </div>
 </body>

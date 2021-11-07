@@ -1,3 +1,5 @@
-for stylsheet in page.stylesheets {
-    print(`<link rel="stylesheet" href="/assets/${stylesheet}">`);
+fn generate(generator, page) {
+    for stylsheet in page.param("stylesheets") {
+        generator.text(`<link rel="stylesheet" href="/assets/${stylesheet}">`);
+    }
 }

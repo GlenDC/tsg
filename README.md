@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/images/banner.svg" alt="TSG banner image"/>
+  <img src="docs/images/banner.png" alt="TSG banner image"/>
 </p>
 
 TSG, short for Tiny Site Generator, is an opinionated

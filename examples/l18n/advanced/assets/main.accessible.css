@@ -1,0 +1,46 @@
+body {
+    font-size: 20pt;
+    font-family: Verdana, Geneva, Arial, Helvetica, sans-serif;
+    color: rgb(255, 255, 255);
+    background-color: black;
+    line-height: 28pt;
+    padding-left: 10pt;
+    padding-right: 10pt;
+    padding-top: 10pt;
+  }
+  
+  h1 {
+    font: 25pt Verdana, Geneva, Arial, Helvetica, sans-serif;
+    font-weight: bold;
+    line-height: 20pt;
+  }
+  
+  p.subheader {
+    font-weight: bold;
+    color: #0000ff;
+  }
+  
+  a {
+    text-decoration: none;
+  }
+  
+  a:link,
+  a:visited {
+    color: rgb(0, 0, 0);
+    font-weight: bold;
+    text-decoration: underline;
+  }
+  
+  a:hover,
+  a:active {
+    color: #ff0000;
+  }
+  
+  div.footer {
+    font-size: 18pt;
+    font-style: italic;
+    line-height: 24pt;
+    text-align: center;
+    padding-top: 45pt;
+  }
+  

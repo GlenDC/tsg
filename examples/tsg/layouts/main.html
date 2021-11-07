@@ -5,14 +5,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>
-        <include>page.title</include>
+        <include>$.title</include>
     </title>
     <<link rel="stylesheet" href="main.css"> 
 </head>
 
 <body>
-    <div class="main">
-        <include>page.content</include>
+    <div>
+        <main>
+            <include>$.content</include>
+        </main>
+        <footer>
+            <include>footer</include>
+        </footer>
     </div>
 </body>
 

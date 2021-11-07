@@ -23,9 +23,9 @@
      inkscape:pagecheckerboard="0"
      inkscape:document-units="mm"
      showgrid="false"
-     inkscape:zoom="0.63778144"
-     inkscape:cx="210.10332"
-     inkscape:cy="385.71207"
+     inkscape:zoom="0.80483033"
+     inkscape:cx="383.93185"
+     inkscape:cy="141.64476"
      inkscape:window-width="1792"
      inkscape:window-height="1067"
      inkscape:window-x="0"
@@ -411,11 +411,35 @@
          x="95.705612"
          y="60.32962">md</tspan></text>
     <rect
+       style="fill:#323232;fill-opacity:1;stroke:none;stroke-width:0.858896;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
+       id="rect39862-8-76"
+       width="5.5714374"
+       height="2.9766216"
+       x="100.09779"
+       y="57.897743"
+       inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
+       inkscape:export-xdpi="150.08253"
+       inkscape:export-ydpi="150.08253" />
+    <text
+       xml:space="preserve"
+       style="font-weight:500;font-size:2.56624px;line-height:1.25;font-family:'Fira Code';-inkscape-font-specification:'Fira Code Medium';fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
+       x="100.55245"
+       y="60.03344"
+       id="text35296-5-0-4"
+       inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
+       inkscape:export-xdpi="150.08253"
+       inkscape:export-ydpi="150.08253"><tspan
+         sodipodi:role="line"
+         id="tspan35294-6-6-01"
+         style="font-size:2.56624px;fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
+         x="100.55245"
+         y="60.03344">yml</tspan></text>
+    <rect
        style="fill:#323232;fill-opacity:1;stroke:none;stroke-width:0.951041;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
        id="rect39862-8-5"
        width="6.8309698"
        height="2.9766216"
-       x="100.35335"
+       x="106.49178"
        y="57.910892"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
        inkscape:export-xdpi="150.08253"
@@ -423,7 +447,7 @@
     <text
        xml:space="preserve"
        style="font-weight:500;font-size:2.56624px;line-height:1.25;font-family:'Fira Code';-inkscape-font-specification:'Fira Code Medium';fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-       x="100.70509"
+       x="106.84351"
        y="60.329624"
        id="text35296-5-0-5"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
@@ -432,14 +456,14 @@
          sodipodi:role="line"
          id="tspan35294-6-6-9"
          style="font-size:2.56624px;fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-         x="100.70509"
+         x="106.84351"
          y="60.329624">rhai</tspan></text>
     <rect
        style="fill:#323232;fill-opacity:1;stroke:none;stroke-width:0.712305;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
        id="rect39862-8-5-9"
        width="3.8319204"
        height="2.9766216"
-       x="108.41606"
+       x="114.02531"
        y="57.910892"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
        inkscape:export-xdpi="150.08253"
@@ -447,7 +471,7 @@
     <text
        xml:space="preserve"
        style="font-weight:500;font-size:2.56624px;line-height:1.25;font-family:'Fira Code';-inkscape-font-specification:'Fira Code Medium';fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-       x="108.76778"
+       x="114.37703"
        y="60.329624"
        id="text35296-5-0-5-4"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
@@ -456,7 +480,7 @@
          sodipodi:role="line"
          id="tspan35294-6-6-9-0"
          style="font-size:2.56624px;fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-         x="108.76778"
+         x="114.37703"
          y="60.329624">sh</tspan></text>
     <path
        id="rect38686-0"
@@ -485,7 +509,7 @@
        id="rect39862-5"
        width="6.9765549"
        height="2.9766216"
-       x="121.45702"
+       x="121.98619"
        y="57.889244"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
        inkscape:export-xdpi="150.08253"
@@ -493,7 +517,7 @@
     <text
        xml:space="preserve"
        style="font-weight:500;font-size:2.56624px;line-height:1.25;font-family:'Fira Code';-inkscape-font-specification:'Fira Code Medium';fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-       x="121.80873"
+       x="122.33791"
        y="60.307972"
        id="text35296-5-9"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
@@ -502,14 +526,14 @@
          sodipodi:role="line"
          id="tspan35294-6-5"
          style="font-size:2.56624px;fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-         x="121.80873"
+         x="122.33791"
          y="60.307972">html</tspan></text>
     <rect
        style="fill:#323232;fill-opacity:1;stroke:none;stroke-width:0.704138;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
        id="rect39862-8-3"
        width="3.7445698"
        height="2.9766216"
-       x="129.70634"
+       x="130.2355"
        y="57.925255"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
        inkscape:export-xdpi="150.08253"
@@ -517,7 +541,7 @@
     <text
        xml:space="preserve"
        style="font-weight:500;font-size:2.56624px;line-height:1.25;font-family:'Fira Code';-inkscape-font-specification:'Fira Code Medium';fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-       x="130.05809"
+       x="130.58725"
        y="60.343987"
        id="text35296-5-0-51"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
@@ -526,14 +550,14 @@
          sodipodi:role="line"
          id="tspan35294-6-6-0"
          style="font-size:2.56624px;fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-         x="130.05809"
+         x="130.58725"
          y="60.343987">md</tspan></text>
     <rect
        style="fill:#323232;fill-opacity:1;stroke:none;stroke-width:0.951041;stroke-linejoin:round;stroke-miterlimit:4;stroke-dasharray:none;stroke-opacity:1;paint-order:stroke fill markers"
        id="rect39862-8-5-3"
        width="6.8309698"
        height="2.9766216"
-       x="134.70573"
+       x="135.23489"
        y="57.925259"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
        inkscape:export-xdpi="150.08253"
@@ -541,7 +565,7 @@
     <text
        xml:space="preserve"
        style="font-weight:500;font-size:2.56624px;line-height:1.25;font-family:'Fira Code';-inkscape-font-specification:'Fira Code Medium';fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-       x="135.0575"
+       x="135.58665"
        y="60.34399"
        id="text35296-5-0-5-2"
        inkscape:export-filename="/Users/glendc/code/github.com/plabayo/tsg/docs/images/banner.png"
@@ -550,7 +574,7 @@
          sodipodi:role="line"
          id="tspan35294-6-6-9-3"
          style="font-size:2.56624px;fill:#c8c8c8;fill-opacity:1;stroke-width:0.0962333"
-         x="135.0575"
+         x="135.58665"
          y="60.34399">rhai</tspan></text>
     <path
        id="rect38686-0-3"

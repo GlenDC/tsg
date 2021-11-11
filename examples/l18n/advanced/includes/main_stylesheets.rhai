@@ -1,5 +1,5 @@
-fn generate(generator, page) {
-    for stylsheet in page.param("stylesheets") {
+fn generate(generator) {
+    for stylsheet in generator.page.param("stylesheets") {
         generator.text(`<link rel="stylesheet" href="/assets/${stylesheet}">`);
     }
 }

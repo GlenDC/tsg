@@ -104,7 +104,23 @@ And from within bash scripts this metadata data is accessed using:
 title="$TSG_META_TITLE"
 ```
 
-#### 2.B.III. Front Matter
+#### 2.B.III. Content
+
+A Layout file can also `include` content. The special metadata
+property `$` can be used here is well as part of your `include` statements.
+Layouts also need to define where the content needs to be placed.
+This content is either the rendered result of the page it lays our
+or the include that configured it as a Layout.
+
+In order to reference the output/content of the file you use the `$%` special variable. For example:
+
+```html
+<main>
+  <include>$%</include>
+</main>
+```
+
+#### 2.B.IV. Front Matter
 
 Front matter data is the optional _yaml_ formatted data you can put at the start
 of any HTML and/or Markdown file. As asset files aren't processed by _TSG_
@@ -155,28 +171,30 @@ methods of the already in scope `tsg` object:
 
 | property | description |
 | - | - |
-| `tsg.includes(str="", bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
-| `tsg.include(str) -> Dynamic` | Return an `File` in case the given path points to an include file, but it can also return a primitive value in case the path extends beyond the filepath to extract some of the metadata within. |
-| `tsg.layouts(str="", bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
-| `tsg.layout(str) -> File` | Return a `File` found on the given path. |
-| `tsg.pages(str="", bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired. |
-| `tsg.page(str="") -> File` | Return a `File` found on the given path or for the current `Page`. |
-| `tsg.metadata(str) -> Dynamic` | Return a Primitive value of the metadata on the given path (any valid _yaml_ value). |
+| `tsg.includes(path:str="", recursive:bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
+| `tsg.include(path:str) -> Dynamic` | Return an `File` in case the given path points to an include file, but it can also return a primitive value in case the path extends beyond the filepath to extract some of the metadata within. |
+| `tsg.layouts(path:str="", recursive:bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
+| `tsg.layout(path:str) -> File` | Return a `File` found on the given path. |
+| `tsg.pages(path:str="", recursive:bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired. |
+| `tsg.page(path:str="") -> File` | Return a `File` found on the given path or for the current `Page`. |
+| `tsg.metadata(path:str) -> Dynamic` | Return a Primitive value of the metadata on the given path (any valid _yaml_ value). |
 
 The `File` type is an _object mapping_ with the following properties:
 
-... TODO
+| property | description |
+| - | - |
+| `file.meta` | _object mapping_ value containing the metadata of the File |
+| `file.content` | _str_ value containing the raw content section of the File |
+| `file.path` | _str_  value containing the relative path of the File (dot notation) |
+| `file.locale` | _str_ value containing the Locale of the File |
+| `file.type` | _str_ value containing the File extension |
 
 A [Rhai][rhai] script is run as a function, and thus it is expected that the last line of the
 script returns the value to be rendered. This can be done implicitly without the use of the `return` keyword. The return value can be one of the following:
 
-- A _primitive_ value: value will be rendered as a string;
-- An _object mapping_: value will be rendered using the regular _TSG_ pipeline into an `html` string;
-- A _list of primitive values_ and/or object mappings: for each the logic of the previous two lines is used;
-
-Supported properties for _object mapping_ return values:
-
-... TODO
+- A _primitive_ value: value will be rendered as a _string_;
+- A _File_ value: value will be rendered using the regular _TSG_ pipeline into an `html` string;
+- A _list of primitive values_ and/or _Files_: for each the logic of the previous two lines is used;
 
 #### 2.C.II. Rhai Scripts as Modules
 
@@ -205,7 +223,11 @@ will result in a generator error.
 
 Everything printed to the STDOUT will be used as the generated content.
 
-### 2.E. Contributing to TSG
+### 2.E. TSG Cli Help
+
+TODO ...
+
+### 2.F. Contributing to TSG
 
 TODO...
 

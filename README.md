@@ -41,6 +41,8 @@ so you can see yourself how a source tree of a typical website made with TSG loo
 
 ### TSG Templating
 
+#### Includes
+
 Layouts, pages and includes all can include other files in its entirety or simply a string value of it.
 
 For HTML and Markdown files this is done as follows:
@@ -52,7 +54,7 @@ For HTML and Markdown files this is done as follows:
 For [Rhai](rhai) scripts this is done as follows:
 
 ```rust
-let baz = generator.include("foo.bar.baz");
+let baz = tsg.include("foo.bar.baz");
 ```
 
 For Bash (`*.sh`) scripts this is done as follows:
@@ -76,6 +78,71 @@ The last two examples also work with:
 - a Markdown/HTML files: expected to be found within the metadata (Front matter) section of the file;
 
 The first example can work with any valid `includes/*` file.
+
+#### Metadata
+
+You can also include strings from within the current metadata. The most common metadata is the one defined as Front matter of a page (available for both HTML and Markdown).
+Let's dive into some examples.
+
+Including string values in HTML and Markdown files from the metadata is done almost
+the same way was other includes, with the only distinctive defines that
+the root property is `$`:
+
+```html
+<include>$.title</include>
+```
+
+For [Rhai][rhai] scripts it is done using:
+
+```rust
+let title = tsg.meta["title"];
+```
+
+And from within bash scripts this metadata data is accessed using:
+
+```bash
+title="$TSG_META_TITLE"
+```
+
+#### Front Matter
+
+Front matter data is the optional _yaml_ formatted data you can put at the start
+of any HTML and/or Markdown file. As asset files aren't processed by _TSG_
+you should probably not add Front Matter for these files. Here is an example
+of a blog post file with Front Matter data:
+
+```yaml
+---
+title: My Blog Post
+intro: A blog post to showcase front matter data defined in a file.
+date: 2021-11-10 18:30:00
+draft: false
+---
+
+<include>$.intro</include>
+
+Hello, glad that you're here!
+Let's talk about front matter data.
+```
+
+> NOTE: that there is nothing special about the kind of metadata used in the above example.
+> _TSG_ processes them as raw _yaml_ without giving any special meaning or value to any of
+> these individual properties. It is how you use and interpret the metadata defined by yourself
+> that give them the meaning and value you seek.
+
+The above works for HTML files as well. This metadata can be accessed as follows:
+
+- within the files itself using the special `$` root include property;
+- by any of the layout files used for a page;
+- by the [Rhai][rhai] script including a Markdown/Html file;
+
+[Rhai][rhai] scripts can also define metadata when returning
+a render object rather than a primitive.
+
+Also note that metadata can be shadowed.
+If there are metadata properties defined in multiple layers (e.g. layout, page and include),
+the value will be used defined in the most inner layer. Best is to to keep your metadata
+to a minimal and unique, and you will not have to worry about it at all. You'll be fine.
 
 ### Rhai scripting
 

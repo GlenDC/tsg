@@ -5,7 +5,7 @@
 > **WARNING**: this tool is still unstable, under active development and incomplete.
 > You advised to not use TSG yet in any of your own products for anything else besides experimentation!
 
-## Overview
+## 1. Overview
 
 Tiny Site Generator (_TSG_) is a static site generator written in Rust.
 It is optimized for speed, ease of use, and minimal learning curve.
@@ -20,14 +20,14 @@ A typical website of moderate size is rendered by _TSG_ in a fraction of a secon
 
 _TSG_ is designed to work well with any kind of static website including blogs, tumbles and docs.
 
-### Supported architectures
+### 1.A. Supported architectures
 
 _TSG_ releases get bundled with pre-build binaries for Windows, Linux and macOS (Darwin).
 However, you should be able to build to any platform and architecture supported by the Rust (LLVM) toolchain.
 
-## Tiny Site Generator Documentation
+## 2. Tiny Site Generator Documentation
 
-### Directory Layout
+### 2.A. Directory Layout
 
 | path | file formats | description |
 |---|---|---|
@@ -39,9 +39,9 @@ However, you should be able to build to any platform and architecture supported 
 Feel free to also browse around in the [/examples](/examples) folder,
 so you can see yourself how a source tree of a typical website made with TSG looks like. This is also a great way to introduce you to its various aspects and show you how to integrate the frameworks you know (e.g. bootstrap).
 
-### TSG Templating
+### 2.B. TSG Templating
 
-#### Includes
+#### 2.B.I. Includes
 
 Layouts, pages and includes all can include other files in its entirety or simply a string value of it.
 
@@ -79,7 +79,7 @@ The last two examples also work with:
 
 The first example can work with any valid `includes/*` file.
 
-#### Metadata
+#### 2.B.II. Metadata
 
 You can also include strings from within the current metadata. The most common metadata is the one defined as Front matter of a page (available for both HTML and Markdown).
 Let's dive into some examples.
@@ -104,7 +104,7 @@ And from within bash scripts this metadata data is accessed using:
 title="$TSG_META_TITLE"
 ```
 
-#### Front Matter
+#### 2.B.III. Front Matter
 
 Front matter data is the optional _yaml_ formatted data you can put at the start
 of any HTML and/or Markdown file. As asset files aren't processed by _TSG_
@@ -144,15 +144,41 @@ If there are metadata properties defined in multiple layers (e.g. layout, page a
 the value will be used defined in the most inner layer. Best is to to keep your metadata
 to a minimal and unique, and you will not have to worry about it at all. You'll be fine.
 
-### Rhai scripting
+### 2.C. Rhai scripting
 
 Please consult "[the Rhai book - Rhai Language Reference](https://rhai.rs/book/language/index.html)" for any [Rhai][rhai] specific questions. In that section of the book you'll find all you need to know about the language and how to use it. Within this chapter we'll go over the API of the user-defined `Rhai` scripts.
 
-#### API
+#### 2.C.I. API
 
-TODO...
+All exposed _TSG_ functionality can be found as properties and
+methods of the already in scope `tsg` object:
 
-#### Rhai Scripts as Modules
+| property | description |
+| - | - |
+| `tsg.includes(str="", bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
+| `tsg.include(str) -> Dynamic` | Return an `File` in case the given path points to an include file, but it can also return a primitive value in case the path extends beyond the filepath to extract some of the metadata within. |
+| `tsg.layouts(str="", bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
+| `tsg.layout(str) -> File` | Return a `File` found on the given path. |
+| `tsg.pages(str="", bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired. |
+| `tsg.page(str="") -> File` | Return a `File` found on the given path or for the current `Page`. |
+| `tsg.metadata(str) -> Dynamic` | Return a Primitive value of the metadata on the given path (any valid _yaml_ value). |
+
+The `File` type is an _object mapping_ with the following properties:
+
+... TODO
+
+A [Rhai][rhai] script is run as a function, and thus it is expected that the last line of the
+script returns the value to be rendered. This can be done implicitly without the use of the `return` keyword. The return value can be one of the following:
+
+- A _primitive_ value: value will be rendered as a string;
+- An _object mapping_: value will be rendered using the regular _TSG_ pipeline into an `html` string;
+- A _list of primitive values_ and/or object mappings: for each the logic of the previous two lines is used;
+
+Supported properties for _object mapping_ return values:
+
+... TODO
+
+#### 2.C.II. Rhai Scripts as Modules
 
 [Rhai][rhai] scripts can also import other [Rhai][rhai] scripts within your codebase,
 this allows you to define reusable logic. Our advice is to keep your generation logic
@@ -165,11 +191,25 @@ but its a feature that is available for those that feel the need for it.
 
 TODO: confirm how/if it works in the _TSG_ setup and document extra where needed!!!!
 
-### Contributing to TSG
+### 2.D. Bash scripting
+
+Keep the scripting to a minimum. Use [Rhai][rhai] to write your scripts by default,
+and only use Bash scripts in the context of _TSG_ when you really need to.
+
+In case you need to interact with your host system or rely for whatever
+reasons on the UNIX tools it is probably a good enough reason to use Bash scripts.
+As always though, keep it simple and to a minimum.
+
+> (!) Bash scripts can _only_ include primitive values, trying to include entire files
+will result in a generator error.
+
+Everything printed to the STDOUT will be used as the generated content.
+
+### 2.E. Contributing to TSG
 
 TODO...
 
-## Dependencies
+## 3. Dependencies
 
 TSG stands on the shoulder of many great open source libraries.
 

@@ -148,7 +148,22 @@ to a minimal and unique, and you will not have to worry about it at all. You'll 
 
 Please consult "[the Rhai book - Rhai Language Reference](https://rhai.rs/book/language/index.html)" for any [Rhai][rhai] specific questions. In that section of the book you'll find all you need to know about the language and how to use it. Within this chapter we'll go over the API of the user-defined `Rhai` scripts.
 
+#### API
+
 TODO...
+
+#### Rhai Scripts as Modules
+
+[Rhai][rhai] scripts can also import other [Rhai][rhai] scripts within your codebase,
+this allows you to define reusable logic. Our advice is to keep your generation logic
+as simple as possible, so do please be careful in not going overboard in
+your usage of [Rhai][rhai] scripts, for your own sanity and those around you.
+
+Please refer to <https://rhai.rs/book/language/modules/index.html> to learn
+how to import and export modules. They are not a requirement to get started with _TSG_,
+but its a feature that is available for those that feel the need for it.
+
+TODO: confirm how/if it works in the _TSG_ setup and document extra where needed!!!!
 
 ### Contributing to TSG
 

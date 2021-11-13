@@ -31,7 +31,7 @@ However, you should be able to build to any platform and architecture supported 
 
 | path | file formats | description |
 |---|---|---|
-| `/pages/**` | `html/md/rhai` | The files that map to the actual pages on your website, the HTML/MD files and their relative path map directly to an HTML page, while the Rhai script can generate any amount of pages. |
+| `/pages/**` | `html/md/rhai` | The files that map to the actual pages on your website, the HTML/Markdown files and their relative path map directly to an HTML page, while the Rhai script can generate any amount of pages. |
 | `/layouts/**` | `html` | Layouts define the layout of a page, in its entirety or just a content section. Pages have a default layout assumed at `main.html`, any other content which is generated as HTML has no default layout. |
 | `/includes/**` | `html/md/yml/rhai/sh` | Files that can be non-cyclic included as part of pages, layouts and other includes. |
 | `/assets/**` | `*` | Files that are mirrored over to the publish directory as-is. These are the only files for which no out of the box localization support is provided. |

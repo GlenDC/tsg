@@ -95,7 +95,7 @@ the root property is `$`:
 For [Rhai][rhai] scripts it is done using:
 
 ```rust
-let title = tsg.meta["title"];
+let title = tsg.meta("title");
 ```
 
 And from within bash scripts this metadata data is accessed using:
@@ -169,21 +169,30 @@ Please consult "[the Rhai book - Rhai Language Reference](https://rhai.rs/book/l
 All exposed _TSG_ functionality can be found as properties and
 methods of the already in scope `tsg` object:
 
-| property | description |
-| - | - |
-| `tsg.includes(path:str="", recursive:bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
-| `tsg.include(path:str) -> Dynamic` | Return an `File` in case the given path points to an include file, but it can also return a primitive value in case the path extends beyond the filepath to extract some of the metadata within. |
-| `tsg.layouts(path:str="", recursive:bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired |
-| `tsg.layout(path:str) -> File` | Return a `File` found on the given path. |
-| `tsg.pages(path:str="", recursive:bool=False) -> [File]` | Return a list of `File` found on the given path, listed recursive if desired. |
-| `tsg.page(path:str="") -> File` | Return a `File` found on the given path or for the current `Page`. |
-| `tsg.metadata(path:str) -> Dynamic` | Return a Primitive value of the metadata on the given path (any valid _yaml_ value). |
+```rust
+// Include a File, List of Files or primitive metadata value depending on the path.
+let file = tsg.include("foo.bar.baz");         // a file for the found include
+let title = tsg.include("foo.bar.baz.title");  // metadata within the found include
+let files = tsg.include("foo.bar.*");          // all files in includes/foo/bar directory
+let more_files = tsg.include("foo.bar.**");    // all files in includes/foo/bar directory, recursive
+
+// Return a File or List of Files for the given path, one File per page.
+let file = tsg.page();                      // file for current page
+let file = tsg.page("foo.bar.baz");         // a file for the found page
+let title = tsg.page("foo.bar.baz.title");  // metadata within the found page
+let files = tsg.page("foo.bar.*");          // all files in pages/foo/bar directory
+let more_files = tsg.page("foo.bar.**");    // all files in pages/foo/bar directory, recursive
+
+// Return a Primitive value of the metadata on the given path (any valid _yaml_ value).
+let title = tsg.meta("title");  // return "title" metadata property of the foo
+```
 
 The `File` type is an _object mapping_ with the following properties:
 
 | property | description |
 | - | - |
-| `file.meta` | _object mapping_ value containing the metadata of the File |
+| `file.meta(path: str) -> Dynamic` | getter function to access the metadata of the File |
+| `file.set_meta(path: str, value: Dynamic)` | setter function to modify the metadata of the File (in-memory) copy, doesn't change the actual File |
 | `file.content` | _str_ value containing the raw content section of the File |
 | `file.path` | _str_  value containing the relative path of the File (dot notation) |
 | `file.locale` | _str_ value containing the Locale of the File |

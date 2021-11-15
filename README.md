@@ -171,17 +171,17 @@ methods of the already in scope `tsg` object:
 
 ```rust
 // Include a File, List of Files or primitive metadata value depending on the path.
-let file = tsg.include("foo.bar.baz");         // a file for the found include
-let title = tsg.include("foo.bar.baz.title");  // metadata within the found include
-let files = tsg.include("foo.bar.*");          // all files in includes/foo/bar directory
-let more_files = tsg.include("foo.bar.**");    // all files in includes/foo/bar directory, recursive
+let file = tsg.includes("foo.bar.baz");         // a file for the found include
+let title = tsg.includes("foo.bar.baz.title");  // metadata within the found include
+let files = tsg.includes("foo.bar.*");          // all files in includes/foo/bar directory
+let more_files = tsg.includes("foo.bar.**");    // all files in includes/foo/bar directory, recursive
 
 // Return a File or List of Files for the given path, one File per page.
-let file = tsg.page();                      // file for current page
-let file = tsg.page("foo.bar.baz");         // a file for the found page
-let title = tsg.page("foo.bar.baz.title");  // metadata within the found page
-let files = tsg.page("foo.bar.*");          // all files in pages/foo/bar directory
-let more_files = tsg.page("foo.bar.**");    // all files in pages/foo/bar directory, recursive
+let file = tsg.pages();                      // file for current page
+let file = tsg.pages("foo.bar.baz");         // a file for the found page
+let title = tsg.pages("foo.bar.baz.title");  // metadata within the found page
+let files = tsg.pages("foo.bar.*");          // all files in pages/foo/bar directory
+let more_files = tsg.pages("foo.bar.**");    // all files in pages/foo/bar directory, recursive
 
 // Return the most specific metadata property from the parent which included it.
 let title = tsg.meta("title");  // return "title" metadata property of the foo
@@ -194,7 +194,7 @@ The `File` type is an _object mapping_ with the following properties:
 | `file.meta(path: str) -> Dynamic` | getter function to access the metadata of the File |
 | `file.set_meta(path: str, value: Dynamic)` | setter function to modify the metadata of the File (in-memory) copy, doesn't change the actual File |
 | `file.content` | _str_ value containing the raw content section of the File |
-| `file.path` | _str_  value containing the relative path of the File (dot notation) |
+| `file.path` | _str_  value containing the absolute path of the File |
 | `file.locale` | _str_ value containing the Locale of the File |
 | `file.type` | _str_ value containing the File extension |
 

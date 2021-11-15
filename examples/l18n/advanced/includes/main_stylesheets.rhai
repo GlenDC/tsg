@@ -1,5 +1,5 @@
-fn generate(generator) {
-    for stylsheet in generator.page.param("stylesheets") {
-        generator.text(`<link rel="stylesheet" href="/assets/${stylesheet}">`);
-    }
+let output = "";
+for stylesheet in tsg.meta("stylesheets") {
+    output += `<link rel="stylesheet" href="/assets/${stylesheet}">`;
 }
+output

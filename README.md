@@ -252,4 +252,46 @@ In TSG 0.1.0 that list is, in lexical order:
 TODO...
 ```
 
+## 4. FAQ
+
+> Can I use _TSG_ to generate a website developed using React/Angular/Vue/Ember/...
+
+Yes, but you shouldn't. _TSG_ is really meant for static websites, and while you can use Javascript
+and thus also any Javascript framework you want, it is not recommended. These frameworks are more meant
+for full-fledged Javascript-driven websites and web applications, a very different kind of website than
+the ones _TSG_ is designed for.
+
+> Can I use Javascript for my website built using _TSG_?
+
+Yes, most definitely. Your asset files can be anything you want and are directly included in your (generated) HTML files.
+Personally we avoid Javascript if we can, and only use it for the interactive features where we really need it.
+A comment section could be a good use of Javascript, while for example a scrolling feature most likely isn't that great of a feature.
+Opinions differ however and so you are free to use where and how much Javascript you use.
+
+> Can you add X to make Y more easier?
+
+It depends. If it extends the API or takes the design in a different direction than the answer is most likely no.
+If it is about adding a feature than the answer is probably still no. The goal of _TSG_ is to keep the feature
+and its API to a bare minimum as to make it as easy as possible to learn. While at the same time empower you to build
+whatever you want. If you believe it fits within _TSG_'s design philosophy feel free to open a Feature Request
+and we can take it from there.
+
+> Why can I not use my favorite Template Language for my HTML/Markdown files?
+
+_TSG_ is opinionated with the feature surface kept to a bare minimum. Use [Rhai][rhai] scripts
+for the purposes where you would use Template Languages for any kind of special generation.
+And include primitive values just the same as you would using your Template Language, except
+in a slightly different syntax. With _TSG_ your HTML files remain HTML files, and Markdown files
+remain Markdown files.
+
+> Why should I use _TSG_ instead of Jekyll, Hugo, or any other amazing generator project out there?
+
+A good question, please do tell me your take on it. For us the reasons are that their feature set has
+grown to such a size that it takes more time than we wish to spend on it to fully learn it. At the same time,
+for anything more advanced than the normal use you are either limited to the features they offer or you
+have to find a very weird to work around its limitations. These frameworks also really push you almost
+in using an existing theme or develop an entire theme yourself, which is yet another thing you'll have to learn.
+For non web developers like ourselves this is a lot to ask, as what we really just want is a bare minimum website
+for which we fully understood how it is build at the HTML, CSS and if required JS level.
+
 [rhai]: https://rhai.rs/

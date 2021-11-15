@@ -54,7 +54,7 @@ For HTML and Markdown files this is done as follows:
 For [Rhai](rhai) scripts this is done as follows:
 
 ```rust
-let baz = tsg.include("foo.bar.baz");
+let baz = tsg.includes("foo.bar.baz");
 ```
 
 For Bash (`*.sh`) scripts this is done as follows:

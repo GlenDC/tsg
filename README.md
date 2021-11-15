@@ -183,7 +183,7 @@ let title = tsg.page("foo.bar.baz.title");  // metadata within the found page
 let files = tsg.page("foo.bar.*");          // all files in pages/foo/bar directory
 let more_files = tsg.page("foo.bar.**");    // all files in pages/foo/bar directory, recursive
 
-// Return a Primitive value of the metadata on the given path (any valid _yaml_ value).
+// Return the most specific metadata property from the parent which included it.
 let title = tsg.meta("title");  // return "title" metadata property of the foo
 ```
 

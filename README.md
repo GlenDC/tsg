@@ -261,6 +261,23 @@ and thus also any Javascript framework you want, it is not recommended. These fr
 for full-fledged Javascript-driven websites and web applications, a very different kind of website than
 the ones _TSG_ is designed for.
 
+> Can I use Bootstrap or some kind of similar framework for my Website generated using _TSG_?
+
+Yes, definitely you can. Given you define your own HTML files with _TSG_ and the fact that Bootstrap is just a bunch of CSS
+and optionally some JS, you can include it as any other _asset_. Check also out [the Bootstrap example](./examples/bootstrap) to see
+how this plays out in practice.
+
+That being said. There is a certain clarity and beauty in being able to create your website using a minimum of hand crafted HTML and CSS.
+Try to do so if you can and want. This is also the road the authors of _TSG_ have gone for for their own websites. Learn tables or flexbox,
+whatever works for your layouts. Keep it simple and clean. <https://web.dev/patterns/layout/> is an example of some layouts
+using modern CSS. However their solutions don't explain the reasoning behind. On top of that their solutions are each just a possible solution of many.
+
+> Can I use (CSS/Layout) templates for my _TSG_ websites?
+
+No, at least not if you talk about templates that you can share with others or use yourself.
+It is also not something that is planned to be supported. You can definitely look at templates made for
+other site generators as inspiration, but in the end it is expected of you to make your own designs.
+
 > Can I use Javascript for my website built using _TSG_?
 
 Yes, most definitely. Your asset files can be anything you want and are directly included in your (generated) HTML files.

@@ -1,22 +1,38 @@
-use std::path::Path;
 use std::convert::TryFrom;
 use std::error::Error;
-use std::fs;
 use std::fmt;
+use std::fs;
+use std::path::Path;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use regex::Regex;
 
 use super::Meta;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum FileKind {
     Include,
     Layout,
     Page,
 }
 
-#[derive(Debug)]
+impl FileKind {
+    pub fn from_str(s: &str) -> Result<FileKind> {
+        Ok(match s.to_lowercase().as_str() {
+            "includes" => FileKind::Include,
+            "layouts" => FileKind::Layout,
+            "pages" => FileKind::Page,
+            kind => {
+                return Err(anyhow!(
+                    "unexpected raw kind {}, should have been validated by the regex search",
+                    kind
+                ))
+            }
+        })
+    }
+}
+
+#[derive(Debug, Copy, Clone)]
 pub enum FileFormat {
     Html,
     Markdown,
@@ -27,15 +43,17 @@ pub enum FileFormat {
 }
 
 impl FileFormat {
-    pub fn from_str(s: &str) -> Option<FileFormat> {
-        Some(match s.to_lowercase().as_str() {
+    pub fn from_str(s: &str) -> std::result::Result<FileFormat, FileInfoError> {
+        Ok(match s.to_lowercase().as_str() {
             "html" | "htm" => FileFormat::Html,
             "yaml" | "yml" => FileFormat::Yaml,
             "json" => FileFormat::Json,
             "rhai" => FileFormat::Rhai,
-            "md" | "markdown" |"mdown" | "mkdn" | "mdwn" | "mdtxt" | "mdtext" | "text" | "rmd" => FileFormat::Markdown,
+            "md" | "markdown" | "mdown" | "mkdn" | "mdwn" | "mdtxt" | "mdtext" | "text" | "rmd" => {
+                FileFormat::Markdown
+            }
             "sh" => FileFormat::Bash,
-            _ => return None,
+            _ => return Err(FileInfoError::UnexpectedFileFormat(String::from(s))),
         })
     }
 }
@@ -73,7 +91,9 @@ impl Error for FileInfoError {}
 impl fmt::Display for FileInfoError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            FileInfoError::UnexpectedFileFormat(ext) => write!(f, "unexpected file format: {}", ext),
+            FileInfoError::UnexpectedFileFormat(ext) => {
+                write!(f, "unexpected file format: {}", ext)
+            }
             FileInfoError::InvalidPath => write!(f, "invalid file path"),
             FileInfoError::UnexpectedFilePath(path) => write!(f, "unexpected file path: {}", path),
         }
@@ -92,35 +112,27 @@ impl TryFrom<&Path> for FileInfo {
             Some(path) => match RE.captures(path) {
                 Some(m) => (
                     m.name("kind").unwrap(),
-                    m.name("dir"),  // dir is optional, and not defined if direct in root of kind
+                    m.name("dir"), // dir is optional, and not defined if direct in root of kind
                     m.name("name").unwrap(),
-                    m.name("locale"),  // also the locale can be optional within this pattern
+                    m.name("locale"), // also the locale can be optional within this pattern
                     m.name("ext").unwrap(),
                 ),
                 None => return Err(FileInfoError::UnexpectedFilePath(String::from(path))),
-            }
+            },
             None => return Err(FileInfoError::InvalidPath),
         };
         // "parse" the file format from the file extension
-        let file_format = match FileFormat::from_str(raw_ext.as_str()) {
-            Some(file_format) => file_format,
-            None => return Err(FileInfoError::UnexpectedFileFormat(String::from(raw_ext.as_str()))),
-        };
+        let file_format = FileFormat::from_str(raw_ext.as_str())?;
         // optionally "parse" the locale from the locale part
         let locale = raw_locale_opt.and_then(|m| Some(FileLocale::from_str(m.as_str())));
         // "parse" the kind dir from file path, no need to do fancy here as the
         // regex above should have ensured it is one of our expected kinds
-        let kind = match raw_kind.as_str().to_lowercase().as_str() {
-            "includes" => FileKind::Include,
-            "layouts" => FileKind::Layout,
-            "pages" => FileKind::Page,
-            kind => panic!("unexpected raw kind {}, should have been validated by the regex search", kind),
-        };
+        let kind = FileKind::from_str(raw_kind.as_str()).unwrap();
         // optionally turn the dir into a String
         let directory = raw_dir.and_then(|dir| Some(String::from(dir.as_str())));
 
         // return the parsed File Info
-        Ok(FileInfo{
+        Ok(FileInfo {
             Directory: directory,
             Kind: kind,
             Name: String::from(raw_name.as_str()),
@@ -145,10 +157,11 @@ impl File {
     pub fn new<P: AsRef<Path>>(path: P, content: Vec<u8>) -> Result<File> {
         let path = path.as_ref();
         let file_info: FileInfo = path.try_into()?;
-        // TODO: parse meta for Markdown & Html files
-        Ok(File{
+        let mut content: Vec<u8> = content;
+        let meta = Meta::extract(file_info.Format, &mut content)?;
+        Ok(File {
             Content: content,
-            Meta: None,
+            Meta: meta,
             FileInfo: file_info,
         })
     }

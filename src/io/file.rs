@@ -23,10 +23,7 @@ impl FileKind {
             "layouts" => FileKind::Layout,
             "pages" => FileKind::Page,
             kind => {
-                return Err(anyhow!(
-                    "unexpected raw kind {}, should have been validated by the regex search",
-                    kind
-                ))
+                return Err(anyhow!("unexpected raw kind {}", kind))
             }
         })
     }
@@ -45,7 +42,7 @@ pub enum FileFormat {
 impl FileFormat {
     pub fn from_str(s: &str) -> std::result::Result<FileFormat, FileInfoError> {
         Ok(match s.to_lowercase().as_str() {
-            "html" | "htm" => FileFormat::Html,
+            "html" | "htm" | "xhtml" | "xml" => FileFormat::Html,
             "yaml" | "yml" => FileFormat::Yaml,
             "json" => FileFormat::Json,
             "rhai" => FileFormat::Rhai,

@@ -1,9 +1,11 @@
-use regex::bytes::Regex;
+use std::collections::HashMap;
 
-use anyhow::Result;
+use regex::bytes::Regex;
+use anyhow::{anyhow, Result};
+use serde_yaml::Value;
 
 pub struct Meta {
-    raw_content: Vec<u8>,
+    content: HashMap<String, Value>,
 }
 
 use super::file::FileFormat;
@@ -16,6 +18,14 @@ impl Meta {
             // other file formats do not support Meta data, and thus we can immediately return None
             _ => Ok(None),
         }
+    }
+
+    pub fn get<T>(&self, _path: &str) -> Result<T> {
+        Err(anyhow!("TODO: implement"))
+    }
+
+    pub fn set<T>(&mut self, _path: &str, _value: T) -> Result<()> {
+        Err(anyhow!("TODO: implement"))
     }
 
     fn extract_html(content: &mut Vec<u8>) -> Result<Option<Meta>> {
@@ -52,7 +62,8 @@ impl Meta {
                 if let Some(n) = n_opt {
                     drop_first_n_bytes(content, n);
                 }
-                Ok(Some(Meta { raw_content }))
+                let content: HashMap<String, Value> = serde_yaml::from_slice(&raw_content)?;
+                Ok(Some(Meta { content }))
             }
         }
     }

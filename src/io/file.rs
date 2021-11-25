@@ -3,6 +3,7 @@ use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::path::Path;
+use core::ops::Range;
 
 use anyhow::{anyhow, Result};
 use regex::Regex;
@@ -67,17 +68,37 @@ impl FileLocale {
 }
 
 pub struct FileInfo {
-    pub kind: FileKind,
-    pub directory: Option<String>,
-    pub name: String,
-    pub locale: Option<FileLocale>,
-    pub format: FileFormat,
+    kind: FileKind,
+    path: String,
+    directory: Option<Range<usize>>,
+    name: Range<usize>,
+    locale: Option<FileLocale>,
+    format: FileFormat,
 }
 
 impl FileInfo {
+    pub fn kind(&self) -> FileKind {
+        self.kind
+    }
+
     pub fn path(&self) -> &str {
-        // TODO: do for real
-        self.name.as_str()
+        &self.path
+    }
+
+    pub fn directory(&self) -> Option<&str> {
+        self.directory.and_then(|range| Some(&self.path[range]))
+    }
+
+    pub fn name(&self) -> &str {
+        &self.path[self.name]
+    }
+
+    pub fn locale(&self) -> Option<FileLocale> {
+        self.locale
+    }
+
+    pub fn format(&self) -> FileFormat {
+        self.format
     }
 }
 
@@ -89,7 +110,7 @@ impl TryFrom<&Path> for FileInfo {
             static ref RE: Regex = Regex::new(r"(?i)(?P<kind>includes|layouts|pages)(?P<dir>((/|\\)[^/\\]+)+)?(/|\\)(?P<name>\s+)(?P<locale>(\.[a-z\-_\d]+)+)?(\.(?P<ext>[a-z]+)$").unwrap();
         }
         // extract raw name, locale (opt) and extension (indicates file format)
-        let (raw_kind, raw_dir, raw_name, raw_locale_opt, raw_ext) = match path.to_str() {
+        let (raw_kind, raw_dir, raw_name, raw_locale_opt, raw_ext, path) = match path.to_str() {
             Some(path) => match RE.captures(path) {
                 Some(m) => (
                     m.name("kind").unwrap(),
@@ -97,6 +118,7 @@ impl TryFrom<&Path> for FileInfo {
                     m.name("name").unwrap(),
                     m.name("locale"), // also the locale can be optional within this pattern
                     m.name("ext").unwrap(),
+                    String::from(path),
                 ),
                 None => return Err(FileInfoError::UnexpectedFilePath(String::from(path))),
             },
@@ -110,13 +132,14 @@ impl TryFrom<&Path> for FileInfo {
         // regex above should have ensured it is one of our expected kinds
         let kind = FileKind::from_str(raw_kind.as_str()).unwrap();
         // optionally turn the dir into a String
-        let directory = raw_dir.and_then(|dir| Some(String::from(dir.as_str())));
+        let directory = raw_dir.and_then(|dir| Some(dir.range()));
 
         // return the parsed File Info
         Ok(FileInfo {
-            directory: directory,
             kind: kind,
-            name: String::from(raw_name.as_str()),
+            path: path,
+            directory: directory,
+            name: raw_name.range(),
             locale: locale,
             format: file_format,
         })

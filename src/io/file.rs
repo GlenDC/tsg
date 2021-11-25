@@ -86,15 +86,15 @@ impl FileInfo {
     }
 
     pub fn directory(&self) -> Option<&str> {
-        self.directory.and_then(|range| Some(&self.path[range]))
+        self.directory.as_ref().and_then(|range| Some(&self.path[range.start..range.end]))
     }
 
     pub fn name(&self) -> &str {
-        &self.path[self.name]
+        &self.path[self.name.start..self.name.end]
     }
 
-    pub fn locale(&self) -> Option<FileLocale> {
-        self.locale
+    pub fn locale(&self) -> Option<&FileLocale> {
+        self.locale.as_ref()
     }
 
     pub fn format(&self) -> FileFormat {

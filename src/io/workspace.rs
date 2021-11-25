@@ -18,14 +18,14 @@ impl Workspace {
 
         let pages = load_files(
             path.join("pages"),
-            &|file| match file.info().format {
+            &|file| match file.info().format() {
                 FileFormat::Html | FileFormat::Markdown | FileFormat::Rhai => true,
                 _ => false,
             })?;
 
         let layouts = load_files(
             path.join("layouts"),
-            &|file| match file.info().format {
+            &|file| match file.info().format() {
                 FileFormat::Html => true,
                 _ => false,
             })?;
@@ -109,7 +109,7 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&File) -> bool) -> Result<
             let file = File::new(path)?;
             if filter(&file) {
                 // TODO: is this clone really needed?
-                files.insert(file.info().name.clone(), FileEntry::File(file));
+                files.insert(String::from(file.info().name()), FileEntry::File(file));
             }
         }
     }

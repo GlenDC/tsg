@@ -22,9 +22,7 @@ impl FileKind {
             "includes" => FileKind::Include,
             "layouts" => FileKind::Layout,
             "pages" => FileKind::Page,
-            kind => {
-                return Err(anyhow!("unexpected raw kind {}", kind))
-            }
+            kind => return Err(anyhow!("unexpected raw kind {}", kind)),
         })
     }
 }
@@ -69,31 +67,17 @@ impl FileLocale {
 }
 
 pub struct FileInfo {
-    Kind: FileKind,
-    Directory: Option<String>,
-    Name: String,
-    Locale: Option<FileLocale>,
-    Format: FileFormat,
+    pub kind: FileKind,
+    pub directory: Option<String>,
+    pub name: String,
+    pub locale: Option<FileLocale>,
+    pub format: FileFormat,
 }
 
-#[derive(Debug)]
-pub enum FileInfoError {
-    UnexpectedFileFormat(String),
-    InvalidPath,
-    UnexpectedFilePath(String),
-}
-
-impl Error for FileInfoError {}
-
-impl fmt::Display for FileInfoError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            FileInfoError::UnexpectedFileFormat(ext) => {
-                write!(f, "unexpected file format: {}", ext)
-            }
-            FileInfoError::InvalidPath => write!(f, "invalid file path"),
-            FileInfoError::UnexpectedFilePath(path) => write!(f, "unexpected file path: {}", path),
-        }
+impl FileInfo {
+    pub fn path(&self) -> &str {
+        // TODO: do for real
+        self.name.as_str()
     }
 }
 
@@ -130,36 +114,87 @@ impl TryFrom<&Path> for FileInfo {
 
         // return the parsed File Info
         Ok(FileInfo {
-            Directory: directory,
-            Kind: kind,
-            Name: String::from(raw_name.as_str()),
-            Locale: locale,
-            Format: file_format,
+            directory: directory,
+            kind: kind,
+            name: String::from(raw_name.as_str()),
+            locale: locale,
+            format: file_format,
         })
     }
 }
 
+#[derive(Debug)]
+pub enum FileInfoError {
+    UnexpectedFileFormat(String),
+    InvalidPath,
+    UnexpectedFilePath(String),
+}
+
+impl Error for FileInfoError {}
+
+impl fmt::Display for FileInfoError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FileInfoError::UnexpectedFileFormat(ext) => {
+                write!(f, "unexpected file format: {}", ext)
+            }
+            FileInfoError::InvalidPath => write!(f, "invalid file path"),
+            FileInfoError::UnexpectedFilePath(path) => write!(f, "unexpected file path: {}", path),
+        }
+    }
+}
+
 pub struct File {
-    Content: Vec<u8>,
-    Meta: Option<Meta>,
-    FileInfo: FileInfo,
+    data: Option<FileData>,
+    file_info: FileInfo,
 }
 
 impl File {
-    pub fn read<P: AsRef<Path>>(path: P) -> Result<File> {
-        let content = fs::read(&path)?;
-        File::new(path, content)
-    }
-
-    pub fn new<P: AsRef<Path>>(path: P, content: Vec<u8>) -> Result<File> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<File> {
         let path = path.as_ref();
         let file_info: FileInfo = path.try_into()?;
-        let mut content: Vec<u8> = content;
-        let meta = Meta::extract(file_info.Format, &mut content)?;
         Ok(File {
-            Content: content,
-            Meta: meta,
-            FileInfo: file_info,
+            data: None,
+            file_info: file_info,
+        })
+    }
+
+    pub fn content(&mut self) -> Result<&[u8]> {
+        Ok(&self.data()?.content[..])
+    }
+
+    pub fn meta(&mut self) -> Result<Option<&Meta>> {
+        Ok(match &self.data()?.meta {
+            None => None,
+            Some(meta) => Some(&meta),
+        })
+    }
+
+    pub fn info(&self) -> &FileInfo {
+        &self.file_info
+    }
+
+    fn data(&mut self) -> Result<&FileData> {
+        if self.data.is_none() {
+            self.data = Some(FileData::read(self.file_info.path(), self.file_info.format)?);
+        }
+        Ok(self.data.as_ref().unwrap())
+    }
+}
+
+struct FileData {
+    content: Vec<u8>,
+    meta: Option<Meta>,
+}
+
+impl FileData {
+    pub fn read<P: AsRef<Path>>(path: P, file_format: FileFormat) -> Result<FileData> {
+        let path = path.as_ref();
+        let mut content = fs::read(&path)?;
+        let meta = Meta::extract(file_format, &mut content)?;
+        Ok(FileData {
+            content: content,
+            meta: meta,
         })
     }
 }

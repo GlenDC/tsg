@@ -1,3 +1,5 @@
+pub mod data;
+
 mod file;
 pub use file::{File, FileFormat, FileKind, FileLocale};
 

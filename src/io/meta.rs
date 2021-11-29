@@ -1,8 +1,10 @@
 use std::collections::HashMap;
 
-use regex::bytes::Regex;
 use anyhow::{anyhow, Result};
-use serde_yaml::Value;
+use regex::bytes::Regex;
+use serde_yaml;
+
+use super::data::Value;
 
 pub struct Meta {
     content: HashMap<String, Value>,
@@ -20,13 +22,21 @@ impl Meta {
         }
     }
 
-    pub fn get<T>(&self, _path: &str) -> Result<T> {
-        Err(anyhow!("TODO: implement"))
+    // TODO: implement get/set :)
+
+    pub fn get_path(&self, _path: &str) -> Option<Value> {
+        None // TODO: implement
     }
 
-    pub fn set<T>(&mut self, _path: &str, _value: T) -> Result<()> {
-        Err(anyhow!("TODO: implement"))
+    pub fn get_path_iter(&self, _it: &mut dyn Iterator<Item = &str>) -> Option<Value> {
+        None // TODO: implement
     }
+
+    pub fn set_path(&mut self, _path: &str, _value: Value) {
+        // TODO: implement
+    }
+
+    // TODO: support glob?!?
 
     fn extract_html(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
@@ -62,7 +72,9 @@ impl Meta {
                 if let Some(n) = n_opt {
                     drop_first_n_bytes(content, n);
                 }
-                let content: HashMap<String, Value> = serde_yaml::from_slice(&raw_content)?;
+                let m: HashMap<String, serde_yaml::Value> = serde_yaml::from_slice(&raw_content)?;
+                let content: HashMap<String, Value> =
+                    m.into_iter().map(|(k, v)| (k, v.into())).collect();
                 Ok(Some(Meta { content }))
             }
         }

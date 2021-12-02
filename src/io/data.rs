@@ -3,6 +3,8 @@ use std::collections::HashMap;
 use serde_json;
 use serde_yaml;
 
+use super::path::{PathIter, PathComponent};
+
 #[derive(Debug, Clone)]
 pub enum Value {
     Null,
@@ -14,25 +16,47 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn get_path(&self, path: &str) -> Option<&Value> {
-        let mut it = path.split(".").into_iter();
-        self.get_path_iter(&mut it)
+    pub fn glob<'a, 'b, T> (&'a self, t: T) -> Vec<&'a Value>
+        where T: Into<PathIter<'b>>
+    {
+        let mut it = t.into();
+        let mut v = Vec::new();
+        self.glob_recursive(&mut it, &mut v);
+        v
     }
 
-    pub fn get_path_iter(&self, it: &mut dyn Iterator<Item = &str>) -> Option<&Value> {
+    fn glob_recursive<'a, 'b> (&'a self, it: &mut PathIter<'b>, output: &mut Vec<&'a Value>) -> Option<()>{
         let mut value = self;
         loop {
             match it.next() {
-                None => return Some(value),
-                Some(component) if component.is_empty() => return Some(value),
-                Some(component) => {
-                    match value {
-                        Value::Mapping(mapping) => match mapping.get(component) {
+                None => {
+                    output.push(value);
+                    return Some(());
+                },
+                Some(component) => match component {
+                    PathComponent::Empty => (), // skip and continue
+                    PathComponent::Any => match value {
+                        Value::Mapping(mapping) => {
+                            for value in mapping.values() {
+                                value.glob_recursive(it, output);
+                            }
+                        }
+                        Value::Sequence(sequence) => {
+                            for value in sequence {
+                                value.glob_recursive(it, output);
+                            }
+                        }
+                        // any non container type is ignored as it is not part of the any here
+                        _ => return None,
+                    },
+                    PathComponent::AnyRecursive => (), // TODO
+                    PathComponent::Name(name) => match value {
+                        Value::Mapping(mapping) => match mapping.get(name) {
                             Some(found_value) => value = found_value,
                             None => return None,
                         },
                         Value::Sequence(sequence) => {
-                            let index: usize = match component.parse() {
+                            let index: usize = match name.parse() {
                                 Ok(i) => i,
                                 Err(_) => return None,
                             };
@@ -42,11 +66,12 @@ impl Value {
                             value = &sequence[index];
                         }
                         _ => return None,
-                    };
-                }
+                    },
+                },
             }
         }
     }
+
 
     // TODO: implement set_path(&mut self, ...) and set_path_iter(&mut self, ...)
 

@@ -16,6 +16,15 @@ pub enum Value {
 }
 
 impl Value {
+    pub fn glob_first<'a, 'b, T> (&'a self, t: T) -> Option<&'a Value>
+        where T: Into<PathIter<'b>>
+    {
+        let v = self.glob(t);
+        v.into_iter().next()
+    }
+
+    // TOOD: implement as an iterator, so we do not go deeper than required
+
     pub fn glob<'a, 'b, T> (&'a self, t: T) -> Vec<&'a Value>
         where T: Into<PathIter<'b>>
     {

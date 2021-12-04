@@ -30,11 +30,13 @@ impl Value {
     {
         let mut it = t.into();
         let mut v = Vec::new();
-        self.glob_recursive(&mut it, &mut v);
+        self.glob_inner(&mut it, &mut v);
         v
     }
 
-    fn glob_recursive<'a, 'b> (&'a self, it: &mut PathIter<'b>, output: &mut Vec<&'a Value>) -> Option<()>{
+    fn glob_inner<'a, 'b, T> (&'a self, it: &mut T, output: &mut Vec<&'a Value>) -> Option<()>
+        where T: Iterator<Item = PathComponent<'b>> + ?Sized
+    {
         let mut value = self;
         loop {
             match it.next() {
@@ -47,18 +49,18 @@ impl Value {
                     PathComponent::Any => match value {
                         Value::Mapping(mapping) => {
                             for value in mapping.values() {
-                                value.glob_recursive(it, output);
+                                value.glob_inner(it, output);
                             }
                         }
                         Value::Sequence(sequence) => {
                             for value in sequence {
-                                value.glob_recursive(it, output);
+                                value.glob_inner(it, output);
                             }
                         }
-                        // any non container type is ignored as it is not part of the any here
-                        _ => return None,
+                        // skip any for these values, such that its value will be returned in case iterator is exhausted
+                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => continue,
                     },
-                    PathComponent::AnyRecursive => (), // TODO
+                    PathComponent::AnyRecursive => return self.glob_inner_recursive(it, output),
                     PathComponent::Name(name) => match value {
                         Value::Mapping(mapping) => match mapping.get(name) {
                             Some(found_value) => value = found_value,
@@ -77,6 +79,66 @@ impl Value {
                         _ => return None,
                     },
                 },
+            }
+        }
+    }
+
+    // TODO: figure out on paper how we'll do this recursive business,
+    // code should become obvious after that is figured out
+
+    fn glob_inner_recursive<'a, 'b, T> (&'a self, it: &mut T, output: &mut Vec<&'a Value>) -> Option<()>
+        where T: Iterator<Item = PathComponent<'b>> + ?Sized
+    {
+        let path: Vec<PathComponent<'b>> = it.filter(|pc| match pc {
+            PathComponent::Empty => false,
+            _ => true,
+        }).skip_while(|pc| match pc {
+            PathComponent::Any | PathComponent::AnyRecursive => true,
+            _ => false,
+        }).collect();
+
+        match self {
+            Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => if path.is_empty() {
+                output.push(self);
+                Some(())
+            } else {
+                None
+            },
+            Value::Sequence(seq) => {
+                let n = output.len();
+                for (index, value) in seq.iter().enumerate() {
+                    match value {
+                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => if path.is_empty() {
+                            output.push(self);
+                        } else if let PathComponent::Name(name) = path[0] {
+                            if let Ok(name_as_index) = name.parse::<usize>() {
+                                if name_as_index == index {
+                                    let mut path = path[1..].to_vec().into_iter();
+                                    self.glob_inner(&mut path, output);
+                                }
+                            }
+                        },
+                        Value::Sequence(_seq) => {
+                            // TODO
+                        }
+                        Value::Mapping(_map) => (), // TODO
+                    }
+                }
+                if n < output.len() {
+                    Some(())
+                } else {
+                    None
+                }
+            },
+            Value::Mapping(map) => {
+                let n = output.len();
+                for (_key, _value) in map {
+                }
+                if n < output.len() {
+                    Some(())
+                } else {
+                    None
+                }
             }
         }
     }

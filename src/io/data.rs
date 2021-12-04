@@ -380,3 +380,30 @@ impl From<serde_json::Value> for Value {
         }
     }
 }
+
+pub struct ValueIter<'a, 'b> {
+    root: &'a Value,
+    path: Vec<PathComponent<'b>>,
+
+    // TODO: how to store iterator state?!?!?!
+}
+
+impl <'a, 'b> ValueIter<'a, 'b> {
+    pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIter<'a, 'b>
+        where T: Into<PathIter<'b>>
+    {
+        ValueIter{
+            root: value,
+            path: path_iter.into().collect(),
+        }
+    }
+}
+
+impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
+    type Item = &'a Value;
+
+    fn next(&mut self) -> Option<&'a Value> {
+        // TODO: implement actual functionality
+        Some(self.root)
+    }
+}

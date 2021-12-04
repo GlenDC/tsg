@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use serde_json;
 use serde_yaml;
@@ -382,10 +382,11 @@ impl From<serde_json::Value> for Value {
 }
 
 pub struct ValueIter<'a, 'b> {
-    root: &'a Value,
+    root: Option<&'a Value>,
     path: Vec<PathComponent<'b>>,
-
-    // TODO: how to store iterator state?!?!?!
+    path_index: usize,
+    children: Vec<ValueIter<'a, 'b>>,
+    recursive: bool,
 }
 
 impl <'a, 'b> ValueIter<'a, 'b> {
@@ -393,8 +394,11 @@ impl <'a, 'b> ValueIter<'a, 'b> {
         where T: Into<PathIter<'b>>
     {
         ValueIter{
-            root: value,
-            path: path_iter.into().collect(),
+            root: Some(value),
+            path: normalize_path_iter_to_vec(path_iter),
+            path_index: 0,
+            children: Vec::new(),
+            recursive: false,
         }
     }
 }
@@ -403,8 +407,35 @@ impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
     type Item = &'a Value;
 
     fn next(&mut self) -> Option<&'a Value> {
-        // TODO: implement actual functionality
-        Some(self.root)
+        let mut value_stack = VecDeque::with_capacity(2);
+        value_stack.push_back(self);
+        loop {
+            if value_stack.is_empty() {
+                break
+            }
+
+            if value_stack[0].path.is_empty() {
+                return match value_stack.pop_front() {
+                    Some(v) => v.root,
+                    None => None,
+                };
+            }
+
+            if value_stack[0].path_index >= value_stack[0].path.len() {
+                value_stack.pop_front();
+                continue;
+            }
+            
+
+            // TODO:
+            // - implement match
+            // - somehow be able to move path...
+            match value_stack[0].path[value_stack[0].path_index] {
+                PathComponent::Empty => (),
+                _ => (),
+            }
+        }
+        None
     }
 }
 
@@ -430,8 +461,9 @@ fn normalize_path_iter_to_vec<'a, T>(path_iter: T) -> Vec<PathComponent<'a>>
         },
         PathComponent::AnyRecursive => (v, c),
     });
-    if !matches!(p, PathComponent::Empty) {
-        out.push(p);
+    match p {
+        PathComponent::Any | PathComponent::AnyRecursive => out.push(p),
+        _ => (),
     }
     out
 }

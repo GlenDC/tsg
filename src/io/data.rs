@@ -407,3 +407,31 @@ impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
         Some(self.root)
     }
 }
+
+fn normalize_path_iter_to_vec<'a, T>(path_iter: T) -> Vec<PathComponent<'a>>
+    where T: Into<PathIter<'a>>
+{
+    let (mut out, p) = path_iter.into().fold((Vec::new(), PathComponent::Empty), |(mut v, p), c| match c {
+        PathComponent::Empty => (v, p),
+        PathComponent::Name(_) => {
+            match p {
+                PathComponent::Any | PathComponent::AnyRecursive => v.push(p),
+                _ => (),
+            }
+            v.push(c);
+            (v, c)
+        },
+        PathComponent::Any => {
+            if matches!(c, PathComponent::AnyRecursive) {
+                (v, p)
+            } else {
+                (v, c)
+            }
+        },
+        PathComponent::AnyRecursive => (v, c),
+    });
+    if !matches!(p, PathComponent::Empty) {
+        out.push(p);
+    }
+    out
+}

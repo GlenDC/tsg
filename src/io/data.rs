@@ -16,137 +16,20 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn glob_first<'a, 'b, T> (&'a self, t: T) -> Option<&'a Value>
+    pub fn value<'a, 'b, T> (&'a self, t: T) -> Option<&'a Value>
         where T: Into<PathIter<'b>>
     {
-        let v = self.glob(t);
-        v.into_iter().next()
+        self.value_iter(t).next()
     }
 
-    // TOOD: implement as an iterator, so we do not go deeper than required
 
-    pub fn glob<'a, 'b, T> (&'a self, t: T) -> Vec<&'a Value>
+    pub fn value_iter<'a, 'b, T> (&'a self, t: T) -> ValueIter<'a, 'b>
         where T: Into<PathIter<'b>>
     {
-        let mut it = t.into();
-        let mut v = Vec::new();
-        self.glob_inner(&mut it, &mut v);
-        v
+        ValueIter::new(self, t)
     }
-
-    fn glob_inner<'a, 'b, T> (&'a self, it: &mut T, output: &mut Vec<&'a Value>) -> Option<()>
-        where T: Iterator<Item = PathComponent<'b>> + ?Sized
-    {
-        let mut value = self;
-        loop {
-            match it.next() {
-                None => {
-                    output.push(value);
-                    return Some(());
-                },
-                Some(component) => match component {
-                    PathComponent::Empty => (), // skip and continue
-                    PathComponent::Any => match value {
-                        Value::Mapping(mapping) => {
-                            for value in mapping.values() {
-                                value.glob_inner(it, output);
-                            }
-                        }
-                        Value::Sequence(sequence) => {
-                            for value in sequence {
-                                value.glob_inner(it, output);
-                            }
-                        }
-                        // skip any for these values, such that its value will be returned in case iterator is exhausted
-                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => continue,
-                    },
-                    PathComponent::AnyRecursive => return self.glob_inner_recursive(it, output),
-                    PathComponent::Name(name) => match value {
-                        Value::Mapping(mapping) => match mapping.get(name) {
-                            Some(found_value) => value = found_value,
-                            None => return None,
-                        },
-                        Value::Sequence(sequence) => {
-                            let index: usize = match name.parse() {
-                                Ok(i) => i,
-                                Err(_) => return None,
-                            };
-                            if index >= sequence.len() {
-                                return None;
-                            }
-                            value = &sequence[index];
-                        }
-                        _ => return None,
-                    },
-                },
-            }
-        }
-    }
-
-    // TODO: figure out on paper how we'll do this recursive business,
-    // code should become obvious after that is figured out
-
-    fn glob_inner_recursive<'a, 'b, T> (&'a self, it: &mut T, output: &mut Vec<&'a Value>) -> Option<()>
-        where T: Iterator<Item = PathComponent<'b>> + ?Sized
-    {
-        let path: Vec<PathComponent<'b>> = it.filter(|pc| match pc {
-            PathComponent::Empty => false,
-            _ => true,
-        }).skip_while(|pc| match pc {
-            PathComponent::Any | PathComponent::AnyRecursive => true,
-            _ => false,
-        }).collect();
-
-        match self {
-            Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => if path.is_empty() {
-                output.push(self);
-                Some(())
-            } else {
-                None
-            },
-            Value::Sequence(seq) => {
-                let n = output.len();
-                for (index, value) in seq.iter().enumerate() {
-                    match value {
-                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => if path.is_empty() {
-                            output.push(self);
-                        } else if let PathComponent::Name(name) = path[0] {
-                            if let Ok(name_as_index) = name.parse::<usize>() {
-                                if name_as_index == index {
-                                    let mut path = path[1..].to_vec().into_iter();
-                                    self.glob_inner(&mut path, output);
-                                }
-                            }
-                        },
-                        Value::Sequence(_seq) => {
-                            // TODO
-                        }
-                        Value::Mapping(_map) => (), // TODO
-                    }
-                }
-                if n < output.len() {
-                    Some(())
-                } else {
-                    None
-                }
-            },
-            Value::Mapping(map) => {
-                let n = output.len();
-                for (_key, _value) in map {
-                }
-                if n < output.len() {
-                    Some(())
-                } else {
-                    None
-                }
-            }
-        }
-    }
-
 
     // TODO: implement set_path(&mut self, ...) and set_path_iter(&mut self, ...)
-
-    // TODO: support glob?!?
 
     pub fn as_none(&self) -> Option<()> {
         match self {

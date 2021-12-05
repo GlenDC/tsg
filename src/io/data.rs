@@ -385,7 +385,7 @@ pub struct ValueIter<'a, 'b> {
     root: Option<&'a Value>,
     path: Vec<PathComponent<'b>>,
     path_index: usize,
-    children: Vec<ValueIter<'a, 'b>>,
+    children: VecDeque<ValueIter<'a, 'b>>,
     recursive: bool,
 }
 
@@ -397,9 +397,55 @@ impl <'a, 'b> ValueIter<'a, 'b> {
             root: Some(value),
             path: normalize_path_iter_to_vec(path_iter),
             path_index: 0,
-            children: Vec::new(),
+            children: VecDeque::new(),
             recursive: false,
         }
+    }
+
+    fn next_value(&mut self) -> Option<&'a Value> {
+        if self.path.is_empty() {
+            return self.root;
+        }
+
+        let mut root = match self.root {
+            None => return None,
+            Some(root) => root,
+        };
+        while self.path_index <= self.path.len() {
+            match self.path[self.path_index] {
+                PathComponent::Empty => {
+                    // shouldn't happen, but doesn't hurt to play it safe either
+                    self.path_index += 1;
+                },
+                PathComponent::Name(name) => {
+                    let opt_value = match root {
+                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => None,
+                        Value::Sequence(seq) => name.parse::<usize>().ok().and_then(|index| {
+                            if index >= seq.len() {
+                                return None;
+                            }
+                            Some(&seq[index])
+                        }),
+                        Value::Mapping(map) => map.get(name),
+                    };
+                    match opt_value {
+                        Some(value) => {
+                            self.path_index += 1;
+                            root = value;
+                            self.root = Some(root);
+                            continue;
+                        }
+                        None => return None,
+                    }
+                },
+                // TODO
+                PathComponent::Any => (),
+                // TODO
+                PathComponent::AnyRecursive => (),
+            }
+        };
+
+        None
     }
 }
 
@@ -407,35 +453,27 @@ impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
     type Item = &'a Value;
 
     fn next(&mut self) -> Option<&'a Value> {
-        let mut value_stack = VecDeque::with_capacity(2);
-        value_stack.push_back(self);
         loop {
-            if value_stack.is_empty() {
-                break
-            }
-
-            if value_stack[0].path.is_empty() {
-                return match value_stack.pop_front() {
-                    Some(v) => v.root,
-                    None => None,
+            if self.children.is_empty() {
+                // TODO: how can a passed "ValueIter" extend the value stack?
+                return match self.next_value() {
+                    Some(value) => Some(value),
+                    None => {
+                        self.root = None;
+                        None
+                    }
                 };
             }
-
-            if value_stack[0].path_index >= value_stack[0].path.len() {
-                value_stack.pop_front();
-                continue;
-            }
-            
-
-            // TODO:
-            // - implement match
-            // - somehow be able to move path...
-            match value_stack[0].path[value_stack[0].path_index] {
-                PathComponent::Empty => (),
-                _ => (),
+            match self.children[0].next_value() {
+                None => {
+                    let mut value_iter = self.children.pop_front().unwrap();
+                    value_iter.root = None;
+                    // try next child or self
+                    continue;
+                },
+                Some(value) => return Some(value),
             }
         }
-        None
     }
 }
 

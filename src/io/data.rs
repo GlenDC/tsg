@@ -265,10 +265,13 @@ impl From<serde_json::Value> for Value {
 }
 
 pub struct ValueIter<'a, 'b> {
+    stack: VecDeque<ValueIterInner<'a, 'b>>,
+}
+
+struct ValueIterInner<'a, 'b> {
     root: Option<&'a Value>,
     path: Vec<PathComponent<'b>>,
     path_index: usize,
-    children: VecDeque<ValueIter<'a, 'b>>,
     recursive: bool,
 }
 
@@ -276,16 +279,50 @@ impl <'a, 'b> ValueIter<'a, 'b> {
     pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIter<'a, 'b>
         where T: Into<PathIter<'b>>
     {
-        ValueIter{
+        let root_value_iter = ValueIterInner::new(value, path_iter);
+        let mut stack = VecDeque::with_capacity(1);
+        stack.push_front(root_value_iter);
+        ValueIter{ stack }
+    }
+}
+
+impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
+    type Item = &'a Value;
+
+    fn next(&mut self) -> Option<&'a Value> {
+        let mut inner_stack = VecDeque::new();
+        loop {
+            if self.stack.is_empty() {
+                return None;
+            }
+            let result = self.stack[0].next_value(&mut inner_stack);
+            if inner_stack.len() > 0 {
+                self.stack.append(&mut inner_stack);
+            }
+            match result {
+                None => {
+                    self.stack.pop_front();
+                    continue;
+                },
+                Some(value) => return Some(value),
+            }
+        }
+    }
+}
+
+impl <'a, 'b> ValueIterInner<'a, 'b> {
+    pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIterInner<'a, 'b>
+        where T: Into<PathIter<'b>>
+    {
+        ValueIterInner{
             root: Some(value),
             path: normalize_path_iter_to_vec(path_iter),
             path_index: 0,
-            children: VecDeque::new(),
             recursive: false,
         }
     }
 
-    fn next_value(&mut self) -> Option<&'a Value> {
+    fn next_value(&mut self, stack: &mut VecDeque<ValueIterInner<'a, 'b>>) -> Option<&'a Value> {
         if self.path.is_empty() {
             return self.root;
         }
@@ -313,11 +350,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                                         if index == value_index {
                                             continue;
                                         }
-                                        self.children.push_back(ValueIter{
+                                        stack.push_back(ValueIterInner{
                                             root: Some(value),
                                             path: self.path[self.path_index..].to_vec(),
                                             path_index: 0,
-                                            children: VecDeque::new(),
                                             recursive: true,
                                         });
                                     } 
@@ -325,11 +361,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                                 Some(&seq[index])
                             }).or_else(|| {
                                 for value in seq {
-                                    self.children.push_back(ValueIter{
+                                    stack.push_back(ValueIterInner{
                                         root: Some(value),
                                         path: self.path[self.path_index..].to_vec(),
                                         path_index: 0,
-                                        children: VecDeque::new(),
                                         recursive: true,
                                     });
                                 }
@@ -343,11 +378,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                                     if result.is_some() && key == name {
                                         continue;
                                     }
-                                    self.children.push_back(ValueIter{
+                                    stack.push_back(ValueIterInner{
                                         root: Some(value),
                                         path: self.path[self.path_index..].to_vec(),
                                         path_index: 0,
-                                        children: VecDeque::new(),
                                         recursive: true,
                                     });
                                 }
@@ -376,12 +410,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                     },
                     Value::Sequence(seq) => {
                         for value in seq {
-                            self.children.push_back(ValueIter{
+                            stack.push_back(ValueIterInner{
                                 root: Some(value),
                                 path: self.path[self.path_index+1..].to_vec(),
                                 path_index: 0,
-                                children: VecDeque::new(),
-                                // TODO: is this always true?!
                                 recursive: false,
                             });
                         }
@@ -391,11 +423,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                     },
                     Value::Mapping(map) => {
                         for value in map.values() {
-                            self.children.push_back(ValueIter{
+                            stack.push_back(ValueIterInner{
                                 root: Some(value),
                                 path: self.path[self.path_index+1..].to_vec(),
                                 path_index: 0,
-                                children: VecDeque::new(),
                                 recursive: false,
                             });
                         }
@@ -415,11 +446,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                     },
                     Value::Sequence(seq) => {
                         for value in seq {
-                            self.children.push_back(ValueIter{
+                            stack.push_back(ValueIterInner{
                                 root: Some(value),
                                 path: self.path[self.path_index+1..].to_vec(),
                                 path_index: 0,
-                                children: VecDeque::new(),
                                 recursive: true,
                             });
                         }
@@ -429,11 +459,10 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                     },
                     Value::Mapping(map) => {
                         for value in map.values() {
-                            self.children.push_back(ValueIter{
+                            stack.push_back(ValueIterInner{
                                 root: Some(value),
                                 path: self.path[self.path_index+1..].to_vec(),
                                 path_index: 0,
-                                children: VecDeque::new(),
                                 recursive: true,
                             });
                         }
@@ -446,34 +475,6 @@ impl <'a, 'b> ValueIter<'a, 'b> {
         };
 
         None
-    }
-}
-
-impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
-    type Item = &'a Value;
-
-    fn next(&mut self) -> Option<&'a Value> {
-        loop {
-            if self.children.is_empty() {
-               return match self.next_value() {
-                    Some(value) => Some(value),
-                    None => {
-                        self.root = None;
-                        if !self.children.is_empty() {
-                            continue;
-                        }
-                        None
-                    }
-                };
-            }
-            match self.children[0].next() {
-                None => {
-                    self.children.pop_front();
-                    continue;
-                },
-                Some(value) => return Some(value),
-            }
-        }
     }
 }
 

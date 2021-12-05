@@ -420,28 +420,145 @@ impl <'a, 'b> ValueIter<'a, 'b> {
                 PathComponent::Name(name) => {
                     let opt_value = match root {
                         Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => None,
-                        Value::Sequence(seq) => name.parse::<usize>().ok().and_then(|index| {
-                            if index >= seq.len() {
-                                return None;
+                        Value::Sequence(seq) => {
+                            name.parse::<usize>().ok().and_then(|index| {
+                                if index >= seq.len() {
+                                    return None;
+                                }
+                                if self.recursive {
+                                    for (value_index, value) in seq.iter().enumerate() {
+                                        if index == value_index {
+                                            continue;
+                                        }
+                                        self.children.push_back(ValueIter{
+                                            root: Some(value),
+                                            path: self.path[self.path_index..].to_vec(),
+                                            path_index: 0,
+                                            children: VecDeque::new(),
+                                            recursive: true,
+                                        });
+                                    } 
+                                }
+                                Some(&seq[index])
+                            }).or_else(|| {
+                                for value in seq {
+                                    self.children.push_back(ValueIter{
+                                        root: Some(value),
+                                        path: self.path[self.path_index..].to_vec(),
+                                        path_index: 0,
+                                        children: VecDeque::new(),
+                                        recursive: true,
+                                    });
+                                }
+                                None
+                            })
+                        },
+                        Value::Mapping(map) => {
+                            let result = map.get(name);
+                            if self.recursive {
+                                for (key, value) in map {
+                                    if result.is_some() && key == name {
+                                        continue;
+                                    }
+                                    self.children.push_back(ValueIter{
+                                        root: Some(value),
+                                        path: self.path[self.path_index..].to_vec(),
+                                        path_index: 0,
+                                        children: VecDeque::new(),
+                                        recursive: true,
+                                    });
+                                }
                             }
-                            Some(&seq[index])
-                        }),
-                        Value::Mapping(map) => map.get(name),
+                            result
+                        },
                     };
                     match opt_value {
                         Some(value) => {
                             self.path_index += 1;
                             root = value;
                             self.root = Some(root);
+                            self.recursive = false;
                             continue;
                         }
                         None => return None,
                     }
                 },
-                // TODO
-                PathComponent::Any => (),
-                // TODO
-                PathComponent::AnyRecursive => (),
+                // no need to take into account recursive-ness when at an "any" path,
+                // as this is not possible due to the normalization process applied on a map prior to using it in ValueIter
+                PathComponent::Any => match root {
+                    Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
+                        // return value if last element, otherwise will end up being None
+                        self.path_index += 1;
+                        continue;
+                    },
+                    Value::Sequence(seq) => {
+                        for value in seq {
+                            self.children.push_back(ValueIter{
+                                root: Some(value),
+                                path: self.path[self.path_index+1..].to_vec(),
+                                path_index: 0,
+                                children: VecDeque::new(),
+                                // TODO: is this always true?!
+                                recursive: false,
+                            });
+                        }
+                        self.path_index += 1;
+                        self.root = None;
+                        return None
+                    },
+                    Value::Mapping(map) => {
+                        for value in map.values() {
+                            self.children.push_back(ValueIter{
+                                root: Some(value),
+                                path: self.path[self.path_index+1..].to_vec(),
+                                path_index: 0,
+                                children: VecDeque::new(),
+                                recursive: false,
+                            });
+                        }
+                        self.path_index += 1;
+                        self.root = None;
+                        return None
+                    }
+                },
+                // no need to take into account recursive-ness when at an "anyRecursive" path,
+                // as this is not possible due to the normalization process applied on a map prior to using it in ValueIter
+                PathComponent::AnyRecursive => match root {
+                    Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
+                        // return value if last element, otherwise will end up being None
+                        self.path_index += 1;
+                        self.recursive = true;
+                        continue;
+                    },
+                    Value::Sequence(seq) => {
+                        for value in seq {
+                            self.children.push_back(ValueIter{
+                                root: Some(value),
+                                path: self.path[self.path_index+1..].to_vec(),
+                                path_index: 0,
+                                children: VecDeque::new(),
+                                recursive: true,
+                            });
+                        }
+                        self.path_index += 1;
+                        self.root = None;
+                        return None
+                    },
+                    Value::Mapping(map) => {
+                        for value in map.values() {
+                            self.children.push_back(ValueIter{
+                                root: Some(value),
+                                path: self.path[self.path_index+1..].to_vec(),
+                                path_index: 0,
+                                children: VecDeque::new(),
+                                recursive: true,
+                            });
+                        }
+                        self.path_index += 1;
+                        self.root = None;
+                        return None
+                    }
+                },
             }
         };
 
@@ -455,20 +572,20 @@ impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
     fn next(&mut self) -> Option<&'a Value> {
         loop {
             if self.children.is_empty() {
-                // TODO: how can a passed "ValueIter" extend the value stack?
-                return match self.next_value() {
+               return match self.next_value() {
                     Some(value) => Some(value),
                     None => {
                         self.root = None;
+                        if !self.children.is_empty() {
+                            continue;
+                        }
                         None
                     }
                 };
             }
-            match self.children[0].next_value() {
+            match self.children[0].next() {
                 None => {
-                    let mut value_iter = self.children.pop_front().unwrap();
-                    value_iter.root = None;
-                    // try next child or self
+                    self.children.pop_front();
                     continue;
                 },
                 Some(value) => return Some(value),

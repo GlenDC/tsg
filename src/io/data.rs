@@ -316,7 +316,7 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
     {
         ValueIterInner{
             root: Some(value),
-            path: normalize_path_iter_to_vec(path_iter),
+            path: path_iter.into().collect(),
             path_index: 0,
             recursive: false,
         }
@@ -333,10 +333,6 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
         };
         while self.path_index <= self.path.len() {
             match self.path[self.path_index] {
-                PathComponent::Empty => {
-                    // shouldn't happen, but doesn't hurt to play it safe either
-                    self.path_index += 1;
-                },
                 PathComponent::Name(name) => {
                     let opt_value = match root {
                         Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => None,
@@ -476,33 +472,4 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
 
         None
     }
-}
-
-fn normalize_path_iter_to_vec<'a, T>(path_iter: T) -> Vec<PathComponent<'a>>
-    where T: Into<PathIter<'a>>
-{
-    let (mut out, p) = path_iter.into().fold((Vec::new(), PathComponent::Empty), |(mut v, p), c| match c {
-        PathComponent::Empty => (v, p),
-        PathComponent::Name(_) => {
-            match p {
-                PathComponent::Any | PathComponent::AnyRecursive => v.push(p),
-                _ => (),
-            }
-            v.push(c);
-            (v, c)
-        },
-        PathComponent::Any => {
-            if matches!(c, PathComponent::AnyRecursive) {
-                (v, p)
-            } else {
-                (v, c)
-            }
-        },
-        PathComponent::AnyRecursive => (v, c),
-    });
-    match p {
-        PathComponent::Any | PathComponent::AnyRecursive => out.push(p),
-        _ => (),
-    }
-    out
 }

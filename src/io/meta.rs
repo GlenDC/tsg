@@ -21,7 +21,7 @@ impl Meta {
             FileFormat::Html => Meta::extract_html(content),
             // extract from entire file data
             FileFormat::Yaml => Meta::extract_yaml(content),
-            FileFormat::Json => Meta::extract_html(content),
+            FileFormat::Json => Meta::extract_json(content),
             // other file formats do not support Meta data, and thus we can immediately return None
             FileFormat::Rhai | FileFormat::Bash => Ok(None),
         }

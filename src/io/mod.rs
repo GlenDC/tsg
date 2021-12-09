@@ -9,3 +9,4 @@ pub use meta::Meta;
 pub mod path;
 
 mod workspace;
+pub use workspace::{Workspace, FileEntry, FileOrValue};

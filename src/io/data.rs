@@ -312,7 +312,7 @@ pub struct ValueIter<'a, 'b> {
 }
 
 struct ValueIterInner<'a, 'b> {
-    root: Option<&'a Value>,
+    root: &'a Value,
     path: Vec<PathComponent<'b>>,
     path_index: usize,
     recursive: bool,
@@ -360,7 +360,7 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
         T: Into<PathIter<'b>>,
     {
         ValueIterInner {
-            root: Some(value),
+            root: value,
             path: path_iter.into().collect(),
             path_index: 0,
             recursive: false,
@@ -368,18 +368,10 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
     }
 
     fn next_value(&mut self, stack: &mut VecDeque<ValueIterInner<'a, 'b>>) -> Option<&'a Value> {
-        if self.path.is_empty() {
-            return self.root;
-        }
-
-        let mut root = match self.root {
-            None => return None,
-            Some(root) => root,
-        };
         while self.path_index < self.path.len() {
             match self.path[self.path_index] {
                 PathComponent::Name(name) => {
-                    let opt_value = match root {
+                    let opt_value = match self.root {
                         Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
                             None
                         }
@@ -396,7 +388,7 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                                             continue;
                                         }
                                         stack.push_back(ValueIterInner {
-                                            root: Some(value),
+                                            root: value,
                                             path: self.path[self.path_index..].to_vec(),
                                             path_index: 0,
                                             recursive: true,
@@ -408,7 +400,7 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                             .or_else(|| {
                                 for value in seq {
                                     stack.push_back(ValueIterInner {
-                                        root: Some(value),
+                                        root: value,
                                         path: self.path[self.path_index..].to_vec(),
                                         path_index: 0,
                                         recursive: true,
@@ -424,7 +416,7 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                                         continue;
                                     }
                                     stack.push_back(ValueIterInner {
-                                        root: Some(value),
+                                        root: value,
                                         path: self.path[self.path_index..].to_vec(),
                                         path_index: 0,
                                         recursive: true,
@@ -437,8 +429,7 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                     match opt_value {
                         Some(value) => {
                             self.path_index += 1;
-                            root = value;
-                            self.root = Some(root);
+                            self.root = value;
                             self.recursive = false;
                             continue;
                         }
@@ -447,7 +438,7 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                 }
                 // no need to take into account recursive-ness when at an "any" path,
                 // as this is not possible due to the normalization process applied on a map prior to using it in ValueIter
-                PathComponent::Any => match root {
+                PathComponent::Any => match self.root {
                     Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
                         // return value if last element, otherwise will end up being None
                         self.path_index += 1;
@@ -456,33 +447,31 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                     Value::Sequence(seq) => {
                         for value in seq {
                             stack.push_back(ValueIterInner {
-                                root: Some(value),
+                                root: value,
                                 path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: false,
                             });
                         }
-                        self.path_index += 1;
-                        self.root = None;
+                        self.path_index = self.path.len();
                         return None;
                     }
                     Value::Mapping(map) => {
                         for value in map.values() {
                             stack.push_back(ValueIterInner {
-                                root: Some(value),
+                                root: value,
                                 path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: false,
                             });
                         }
-                        self.path_index += 1;
-                        self.root = None;
+                        self.path_index = self.path.len();
                         return None;
                     }
                 },
                 // no need to take into account recursive-ness when at an "anyRecursive" path,
                 // as this is not possible due to the normalization process applied on a map prior to using it in ValueIter
-                PathComponent::AnyRecursive => match root {
+                PathComponent::AnyRecursive => match self.root {
                     Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
                         // return value if last element, otherwise will end up being None
                         self.path_index += 1;
@@ -492,27 +481,25 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                     Value::Sequence(seq) => {
                         for value in seq {
                             stack.push_back(ValueIterInner {
-                                root: Some(value),
+                                root: value,
                                 path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: true,
                             });
                         }
-                        self.path_index += 1;
-                        self.root = None;
+                        self.path_index = self.path.len();
                         return None;
                     }
                     Value::Mapping(map) => {
                         for value in map.values() {
                             stack.push_back(ValueIterInner {
-                                root: Some(value),
+                                root: value,
                                 path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: true,
                             });
                         }
-                        self.path_index += 1;
-                        self.root = None;
+                        self.path_index = self.path.len();
                         return None;
                     }
                 },

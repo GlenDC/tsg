@@ -1,8 +1,10 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::path::Path;
 
 use super::{File, FileFormat};
+use super::data::{Value, ValueIter};
+use super::path::{PathIter, PathComponent};
 
 use anyhow::{anyhow, Result};
 
@@ -52,38 +54,35 @@ pub enum FileEntry {
     Dir(HashMap<String, FileEntry>),
 }
 
-pub enum FileEntryGetResult<'a> {
+pub enum FileOrValue<'a> {
     File(&'a File),
-    Dir(&'a HashMap<String, FileEntry>),
-    Value,
+    Value(&'a Value),
+}
+
+enum FileEntryOrValueInnerState<'a, 'b> {
+    None,
+    FileEntry(FileEntryState<'a, 'b>),
+    ValueIter(ValueIter<'a, 'b>),
+}
+
+struct FileEntryState<'a, 'b> {
+    path: Vec<PathComponent<'b>>,
+    entry_ref: &'a FileEntry,
+    path_index: usize,
+    recursive: bool,
 }
 
 impl FileEntry {
-    pub fn get(&self, path: &str) -> Result<FileEntryGetResult> {
-        let mut it = path.split(".").into_iter();
-        let mut entry = self;
-        loop {
-            match it.next() {
-                None => return Ok(match entry {
-                    FileEntry::File(file) => FileEntryGetResult::File(&file),
-                    FileEntry::Dir(files) => FileEntryGetResult::Dir(&files),
-                }),
-                Some(component) => {
-                    match entry {
-                        FileEntry::File(_file) => {
-                            // TODO: given we'll anyway split again to get meta value,
-                            // can we perhaps do without having to go to a string again first?!
-                            let _path = it.fold(String::new(), |acc, s| format!("{}.{}", acc, s));
-                            return Ok(FileEntryGetResult::Value);  // TODO: actually get the metadata
-                        },
-                        FileEntry::Dir(files) => match files.get(component) {
-                            Some(found_entry) => entry = found_entry,
-                            None => return Err(anyhow!("not found")), // TODO: return a typed error
-                        }
-                    };
-                },
-            }
-        }
+    pub fn file_entry_or_value<'a, 'b, T>(&'a self, t: T) -> Option<FileOrValue<'a>>
+    where T: Into<PathIter<'b>>
+    {
+        self.file_entry_or_value_iter(t).next()
+    }
+
+    pub fn file_entry_or_value_iter<'a, 'b, T>(&'a self, t: T) -> FileOrValueIter<'a, 'b>
+    where T: Into<PathIter<'b>>
+    {
+        FileOrValueIter::new(self, t)
     }
 }
 
@@ -114,4 +113,65 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&File) -> bool) -> Result<
     }
 
     Ok(FileEntry::Dir(files))
+}
+
+pub struct FileOrValueIter<'a, 'b> {
+    stack: VecDeque<FileOrValueIterInner<'a, 'b>>,
+}
+
+struct FileOrValueIterInner<'a, 'b> {
+    state: FileEntryOrValueInnerState<'a, 'b>,
+}
+
+impl<'a, 'b> FileOrValueIter<'a, 'b> {
+    pub fn new<T>(entry: &'a FileEntry, path_iter: T) -> FileOrValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        let root_value_iter = FileOrValueIterInner::new(FileEntryOrValueInnerState::FileEntry(FileEntryState{
+            path: path_iter.into().collect(),
+            path_index: 0,
+            entry_ref: entry,
+            recursive: false,
+        }));
+        let mut stack = VecDeque::with_capacity(1);
+        stack.push_front(root_value_iter);
+        FileOrValueIter { stack }
+    }
+}
+
+impl<'a, 'b> Iterator for FileOrValueIter<'a, 'b> {
+    type Item = FileOrValue<'a>;
+
+    fn next(&mut self) -> Option<FileOrValue<'a>> {
+        let mut inner_stack = VecDeque::new();
+        loop {
+            if self.stack.is_empty() {
+                return None;
+            }
+            let result = self.stack[0].next_value(&mut inner_stack);
+            if inner_stack.len() > 0 {
+                self.stack.append(&mut inner_stack);
+            }
+            match result {
+                None => {
+                    self.stack.pop_front();
+                    continue;
+                }
+                Some(value) => return Some(value),
+            }
+        }
+    }
+}
+
+impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
+    pub fn new(state: FileEntryOrValueInnerState<'a, 'b>) -> FileOrValueIterInner<'a, 'b> {
+        FileOrValueIterInner {
+            state,
+        }
+    }
+
+    fn next_value(&mut self, stack: &mut VecDeque<FileOrValueIterInner<'a, 'b>>) -> Option<FileOrValue<'a>> {
+        None
+    }
 }

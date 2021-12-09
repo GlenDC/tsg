@@ -29,7 +29,45 @@ impl Value {
         ValueIter::new(self, t)
     }
 
-    // TODO: implement set_path(&mut self, ...) and set_path_iter(&mut self, ...)
+
+    pub fn value_mut<'a, 'b, T> (&'a mut self, t: T) -> Option<&'a mut Value>
+        where T: Into<PathIter<'b>>
+    {
+        let path: Vec<PathComponent<'b>> = t.into().collect();
+        let (name_path, is_pure_name_path) = path.iter().fold((Vec::new(), false), |(mut v, ok), c| match c {
+            PathComponent::Any | PathComponent::AnyRecursive => (v, false),
+            PathComponent::Name(name) => {
+                v.push(name);
+                (v, ok)
+            },
+        });
+        if is_pure_name_path {
+            // no sane way to handle the possibility of any kind of "Any", be it recursive or not
+            return None;
+        }
+        let mut value = self;
+        for component in name_path {
+            match value {
+                Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => return None,
+                Value::Sequence(seq) => match component.parse::<usize>().ok() {
+                    None => return None,
+                    Some(index) => {
+                        if index >= seq.len() {
+                            return None;
+                        }
+                        value = &mut seq[index];
+                    },
+                },
+                Value::Mapping(map) => match map.get_mut(*component) {
+                    None => return None,
+                    Some(v) => {
+                        value = v;
+                    },
+                },
+            }
+        }
+        Some(value)
+    }
 
     pub fn as_none(&self) -> Option<()> {
         match self {
@@ -331,7 +369,7 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
             None => return None,
             Some(root) => root,
         };
-        while self.path_index <= self.path.len() {
+        while self.path_index < self.path.len() {
             match self.path[self.path_index] {
                 PathComponent::Name(name) => {
                     let opt_value = match root {

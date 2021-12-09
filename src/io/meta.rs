@@ -16,10 +16,14 @@ use super::file::FileFormat;
 impl Meta {
     pub fn extract(format: FileFormat, content: &mut Vec<u8>) -> Result<Option<Meta>> {
         match format {
+            // extract as header data
             FileFormat::Markdown => Meta::extract_markdown(content),
             FileFormat::Html => Meta::extract_html(content),
+            // extract from entire file data
+            FileFormat::Yaml => Meta::extract_yaml(content),
+            FileFormat::Json => Meta::extract_html(content),
             // other file formats do not support Meta data, and thus we can immediately return None
-            _ => Ok(None),
+            FileFormat::Rhai | FileFormat::Bash => Ok(None),
         }
     }
 
@@ -47,7 +51,7 @@ impl Meta {
     fn extract_html(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
             static ref RE: Regex =
-                Regex::new(r"(?m)^\s*<!--\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*-->\s*").unwrap();
+                Regex::new(r"(?m)^\s*<!--\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*-->\s*\n*(?P<next>.)?").unwrap();
         }
         Meta::extract_header(&RE, content)
     }
@@ -55,10 +59,30 @@ impl Meta {
     fn extract_markdown(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
             static ref RE: Regex =
-                Regex::new(r"(?m)^\s*---\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*---\s*(?P<next>.)?")
+                Regex::new(r"(?m)^\s*---\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*---\s*\n*(?P<next>.)?")
                     .unwrap();
         }
         Meta::extract_header(&RE, content)
+    }
+
+    fn extract_yaml(content: &mut Vec<u8>) -> Result<Option<Meta>> {
+        let m: HashMap<String, serde_yaml::Value> = serde_yaml::from_slice(&content)?;
+        let map: HashMap<String, Value> =
+            m.into_iter().map(|(k, v)| (k, v.into())).collect();
+        drop_first_n_bytes(content, content.len());
+        Ok(Some(Meta {
+            content: Value::Mapping(map),
+        }))
+    }
+
+    fn extract_json(content: &mut Vec<u8>) -> Result<Option<Meta>> {
+        let m: HashMap<String, serde_json::Value> = serde_json::from_slice(&content)?;
+        let map: HashMap<String, Value> =
+            m.into_iter().map(|(k, v)| (k, v.into())).collect();
+        drop_first_n_bytes(content, content.len());
+        Ok(Some(Meta {
+            content: Value::Mapping(map),
+        }))
     }
 
     fn extract_header(re: &Regex, content: &mut Vec<u8>) -> Result<Option<Meta>> {

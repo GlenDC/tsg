@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use regex::bytes::Regex;
 use serde_yaml;
 
-use super::data::Value;
+use super::data::{Value, ValueIter};
+use super::path::PathIter;
 
 pub struct Meta {
-    content: HashMap<String, Value>,
+    content: Value,
 }
 
 use super::file::FileFormat;
@@ -22,21 +23,26 @@ impl Meta {
         }
     }
 
-    // TODO: implement get/set :)
-
-    pub fn get_path(&self, _path: &str) -> Option<Value> {
-        None // TODO: implement
+    pub fn value<'a, 'b, T>(&'a self, t: T) -> Option<&'a Value>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        self.content.value(t)
     }
 
-    pub fn get_path_iter(&self, _it: &mut dyn Iterator<Item = &str>) -> Option<Value> {
-        None // TODO: implement
+    pub fn value_iter<'a, 'b, T>(&'a self, t: T) -> ValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        self.content.value_iter(t)
     }
 
-    pub fn set_path(&mut self, _path: &str, _value: Value) {
-        // TODO: implement
+    pub fn value_mut<'a, 'b, T>(&'a mut self, t: T) -> Option<&'a mut Value>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        self.content.value_mut(t)
     }
-
-    // TODO: support glob?!?
 
     fn extract_html(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
@@ -73,9 +79,11 @@ impl Meta {
                     drop_first_n_bytes(content, n);
                 }
                 let m: HashMap<String, serde_yaml::Value> = serde_yaml::from_slice(&raw_content)?;
-                let content: HashMap<String, Value> =
+                let map: HashMap<String, Value> =
                     m.into_iter().map(|(k, v)| (k, v.into())).collect();
-                Ok(Some(Meta { content }))
+                Ok(Some(Meta {
+                    content: Value::Mapping(map),
+                }))
             }
         }
     }

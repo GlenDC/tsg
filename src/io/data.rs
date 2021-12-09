@@ -3,7 +3,7 @@ use std::collections::{HashMap, VecDeque};
 use serde_json;
 use serde_yaml;
 
-use super::path::{PathIter, PathComponent};
+use super::path::{PathComponent, PathIter};
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -16,31 +16,34 @@ pub enum Value {
 }
 
 impl Value {
-    pub fn value<'a, 'b, T> (&'a self, t: T) -> Option<&'a Value>
-        where T: Into<PathIter<'b>>
+    pub fn value<'a, 'b, T>(&'a self, t: T) -> Option<&'a Value>
+    where
+        T: Into<PathIter<'b>>,
     {
         self.value_iter(t).next()
     }
 
-
-    pub fn value_iter<'a, 'b, T> (&'a self, t: T) -> ValueIter<'a, 'b>
-        where T: Into<PathIter<'b>>
+    pub fn value_iter<'a, 'b, T>(&'a self, t: T) -> ValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
     {
         ValueIter::new(self, t)
     }
 
-
-    pub fn value_mut<'a, 'b, T> (&'a mut self, t: T) -> Option<&'a mut Value>
-        where T: Into<PathIter<'b>>
+    pub fn value_mut<'a, 'b, T>(&'a mut self, t: T) -> Option<&'a mut Value>
+    where
+        T: Into<PathIter<'b>>,
     {
         let path: Vec<PathComponent<'b>> = t.into().collect();
-        let (name_path, is_pure_name_path) = path.iter().fold((Vec::new(), false), |(mut v, ok), c| match c {
-            PathComponent::Any | PathComponent::AnyRecursive => (v, false),
-            PathComponent::Name(name) => {
-                v.push(name);
-                (v, ok)
-            },
-        });
+        let (name_path, is_pure_name_path) =
+            path.iter()
+                .fold((Vec::new(), false), |(mut v, ok), c| match c {
+                    PathComponent::Any | PathComponent::AnyRecursive => (v, false),
+                    PathComponent::Name(name) => {
+                        v.push(name);
+                        (v, ok)
+                    }
+                });
         if is_pure_name_path {
             // no sane way to handle the possibility of any kind of "Any", be it recursive or not
             return None;
@@ -48,7 +51,9 @@ impl Value {
         let mut value = self;
         for component in name_path {
             match value {
-                Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => return None,
+                Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
+                    return None
+                }
                 Value::Sequence(seq) => match component.parse::<usize>().ok() {
                     None => return None,
                     Some(index) => {
@@ -56,13 +61,13 @@ impl Value {
                             return None;
                         }
                         value = &mut seq[index];
-                    },
+                    }
                 },
                 Value::Mapping(map) => match map.get_mut(*component) {
                     None => return None,
                     Some(v) => {
                         value = v;
-                    },
+                    }
                 },
             }
         }
@@ -313,14 +318,15 @@ struct ValueIterInner<'a, 'b> {
     recursive: bool,
 }
 
-impl <'a, 'b> ValueIter<'a, 'b> {
+impl<'a, 'b> ValueIter<'a, 'b> {
     pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIter<'a, 'b>
-        where T: Into<PathIter<'b>>
+    where
+        T: Into<PathIter<'b>>,
     {
         let root_value_iter = ValueIterInner::new(value, path_iter);
         let mut stack = VecDeque::with_capacity(1);
         stack.push_front(root_value_iter);
-        ValueIter{ stack }
+        ValueIter { stack }
     }
 }
 
@@ -341,18 +347,19 @@ impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
                 None => {
                     self.stack.pop_front();
                     continue;
-                },
+                }
                 Some(value) => return Some(value),
             }
         }
     }
 }
 
-impl <'a, 'b> ValueIterInner<'a, 'b> {
+impl<'a, 'b> ValueIterInner<'a, 'b> {
     pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIterInner<'a, 'b>
-        where T: Into<PathIter<'b>>
+    where
+        T: Into<PathIter<'b>>,
     {
-        ValueIterInner{
+        ValueIterInner {
             root: Some(value),
             path: path_iter.into().collect(),
             path_index: 0,
@@ -373,9 +380,13 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
             match self.path[self.path_index] {
                 PathComponent::Name(name) => {
                     let opt_value = match root {
-                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => None,
-                        Value::Sequence(seq) => {
-                            name.parse::<usize>().ok().and_then(|index| {
+                        Value::Null | Value::String(_) | Value::Boolean(_) | Value::Number(_) => {
+                            None
+                        }
+                        Value::Sequence(seq) => name
+                            .parse::<usize>()
+                            .ok()
+                            .and_then(|index| {
                                 if index >= seq.len() {
                                     return None;
                                 }
@@ -384,18 +395,19 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                                         if index == value_index {
                                             continue;
                                         }
-                                        stack.push_back(ValueIterInner{
+                                        stack.push_back(ValueIterInner {
                                             root: Some(value),
                                             path: self.path[self.path_index..].to_vec(),
                                             path_index: 0,
                                             recursive: true,
                                         });
-                                    } 
+                                    }
                                 }
                                 Some(&seq[index])
-                            }).or_else(|| {
+                            })
+                            .or_else(|| {
                                 for value in seq {
-                                    stack.push_back(ValueIterInner{
+                                    stack.push_back(ValueIterInner {
                                         root: Some(value),
                                         path: self.path[self.path_index..].to_vec(),
                                         path_index: 0,
@@ -403,8 +415,7 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                                     });
                                 }
                                 None
-                            })
-                        },
+                            }),
                         Value::Mapping(map) => {
                             let result = map.get(name);
                             if self.recursive {
@@ -412,7 +423,7 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                                     if result.is_some() && key == name {
                                         continue;
                                     }
-                                    stack.push_back(ValueIterInner{
+                                    stack.push_back(ValueIterInner {
                                         root: Some(value),
                                         path: self.path[self.path_index..].to_vec(),
                                         path_index: 0,
@@ -421,7 +432,7 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                                 }
                             }
                             result
-                        },
+                        }
                     };
                     match opt_value {
                         Some(value) => {
@@ -433,7 +444,7 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                         }
                         None => return None,
                     }
-                },
+                }
                 // no need to take into account recursive-ness when at an "any" path,
                 // as this is not possible due to the normalization process applied on a map prior to using it in ValueIter
                 PathComponent::Any => match root {
@@ -441,32 +452,32 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                         // return value if last element, otherwise will end up being None
                         self.path_index += 1;
                         continue;
-                    },
+                    }
                     Value::Sequence(seq) => {
                         for value in seq {
-                            stack.push_back(ValueIterInner{
+                            stack.push_back(ValueIterInner {
                                 root: Some(value),
-                                path: self.path[self.path_index+1..].to_vec(),
+                                path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: false,
                             });
                         }
                         self.path_index += 1;
                         self.root = None;
-                        return None
-                    },
+                        return None;
+                    }
                     Value::Mapping(map) => {
                         for value in map.values() {
-                            stack.push_back(ValueIterInner{
+                            stack.push_back(ValueIterInner {
                                 root: Some(value),
-                                path: self.path[self.path_index+1..].to_vec(),
+                                path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: false,
                             });
                         }
                         self.path_index += 1;
                         self.root = None;
-                        return None
+                        return None;
                     }
                 },
                 // no need to take into account recursive-ness when at an "anyRecursive" path,
@@ -477,36 +488,36 @@ impl <'a, 'b> ValueIterInner<'a, 'b> {
                         self.path_index += 1;
                         self.recursive = true;
                         continue;
-                    },
+                    }
                     Value::Sequence(seq) => {
                         for value in seq {
-                            stack.push_back(ValueIterInner{
+                            stack.push_back(ValueIterInner {
                                 root: Some(value),
-                                path: self.path[self.path_index+1..].to_vec(),
+                                path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: true,
                             });
                         }
                         self.path_index += 1;
                         self.root = None;
-                        return None
-                    },
+                        return None;
+                    }
                     Value::Mapping(map) => {
                         for value in map.values() {
-                            stack.push_back(ValueIterInner{
+                            stack.push_back(ValueIterInner {
                                 root: Some(value),
-                                path: self.path[self.path_index+1..].to_vec(),
+                                path: self.path[self.path_index + 1..].to_vec(),
                                 path_index: 0,
                                 recursive: true,
                             });
                         }
                         self.path_index += 1;
                         self.root = None;
-                        return None
+                        return None;
                     }
                 },
             }
-        };
+        }
 
         None
     }

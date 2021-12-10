@@ -50,25 +50,27 @@ impl Meta {
 
     fn extract_html(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
-            static ref RE: Regex =
-                Regex::new(r"(?m)^\s*<!--\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*-->\s*\n*(?P<next>.)?").unwrap();
+            static ref RE: Regex = Regex::new(
+                r"(?m)^\s*<!--\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*-->\s*\n*(?P<next>.)?"
+            )
+            .unwrap();
         }
         Meta::extract_header(&RE, content)
     }
 
     fn extract_markdown(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
-            static ref RE: Regex =
-                Regex::new(r"(?m)^\s*---\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*---\s*\n*(?P<next>.)?")
-                    .unwrap();
+            static ref RE: Regex = Regex::new(
+                r"(?m)^\s*---\s*[\n\r]+\s*(?P<meta>.+?)\s*[\n\r]+\s*---\s*\n*(?P<next>.)?"
+            )
+            .unwrap();
         }
         Meta::extract_header(&RE, content)
     }
 
     fn extract_yaml(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         let m: HashMap<String, serde_yaml::Value> = serde_yaml::from_slice(&content)?;
-        let map: HashMap<String, Value> =
-            m.into_iter().map(|(k, v)| (k, v.into())).collect();
+        let map: HashMap<String, Value> = m.into_iter().map(|(k, v)| (k, v.into())).collect();
         drop_first_n_bytes(content, content.len());
         Ok(Some(Meta {
             content: Value::Mapping(map),
@@ -77,8 +79,7 @@ impl Meta {
 
     fn extract_json(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         let m: HashMap<String, serde_json::Value> = serde_json::from_slice(&content)?;
-        let map: HashMap<String, Value> =
-            m.into_iter().map(|(k, v)| (k, v.into())).collect();
+        let map: HashMap<String, Value> = m.into_iter().map(|(k, v)| (k, v.into())).collect();
         drop_first_n_bytes(content, content.len());
         Ok(Some(Meta {
             content: Value::Mapping(map),

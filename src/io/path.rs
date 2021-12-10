@@ -6,13 +6,24 @@ pub enum PathComponent<'a> {
 }
 
 pub struct PathIter<'a> {
-    it: Box<dyn Iterator<Item = &'a str> + 'a>,
+    it: Box<dyn Iterator<Item = PathComponent<'a>> + 'a>,
     last: Option<PathComponent<'a>>,
 }
 
 impl<'a> PathIter<'a> {
-    fn new<S: AsRef<str> + ?Sized>(s: &'a S) -> PathIter<'a> {
-        let it = s.as_ref().split(".");
+    pub fn new<S: AsRef<str> + ?Sized>(s: &'a S) -> PathIter<'a> {
+        let it = s.as_ref().split(".").filter(|s| s.trim() != "").map(|s| match s.trim() {
+            "*" => PathComponent::Any,
+            "**" => PathComponent::AnyRecursive,
+            name => PathComponent::Name(name),
+        });
+        PathIter {
+            it: Box::new(it),
+            last: None,
+        }
+    }
+
+    pub fn wrap<I: Iterator<Item = PathComponent<'a>> + 'a>(it: I) -> PathIter<'a> {
         PathIter {
             it: Box::new(it),
             last: None,
@@ -30,40 +41,36 @@ impl<'a> Iterator for PathIter<'a> {
                     self.last = None;
                     return None;
                 }
-                Some(s) => {
-                    let s = s.trim();
-                    match s.trim() {
-                        "" => continue,
-                        "*" => match self.last {
-                            None => {
+                Some(c) => match c {
+                    PathComponent::Any => match self.last {
+                        None => {
+                            self.last = Some(PathComponent::Any);
+                            return self.last;
+                        }
+                        Some(pc) => match pc {
+                            PathComponent::Name(_) => {
                                 self.last = Some(PathComponent::Any);
                                 return self.last;
                             }
-                            Some(pc) => match pc {
-                                PathComponent::Name(_) => {
-                                    self.last = Some(PathComponent::Any);
-                                    return self.last;
-                                }
-                                PathComponent::Any | PathComponent::AnyRecursive => continue,
-                            },
+                            PathComponent::Any | PathComponent::AnyRecursive => continue,
                         },
-                        "**" => match self.last {
-                            None => {
+                    },
+                    PathComponent::AnyRecursive => match self.last {
+                        None => {
+                            self.last = Some(PathComponent::AnyRecursive);
+                            return self.last;
+                        }
+                        Some(pc) => match pc {
+                            PathComponent::Name(_) | PathComponent::Any => {
                                 self.last = Some(PathComponent::AnyRecursive);
                                 return self.last;
                             }
-                            Some(pc) => match pc {
-                                PathComponent::Name(_) | PathComponent::Any => {
-                                    self.last = Some(PathComponent::AnyRecursive);
-                                    return self.last;
-                                }
-                                PathComponent::AnyRecursive => continue,
-                            },
+                            PathComponent::AnyRecursive => continue,
                         },
-                        _ => {
-                            self.last = Some(PathComponent::Name(s));
-                            return self.last;
-                        }
+                    },
+                    PathComponent::Name(_) => {
+                        self.last = Some(c);
+                        return self.last;
                     }
                 }
             }
@@ -74,12 +81,6 @@ impl<'a> Iterator for PathIter<'a> {
 impl<'a> From<&'a str> for PathIter<'a> {
     fn from(s: &'a str) -> PathIter<'a> {
         PathIter::new(s)
-    }
-}
-
-impl<'a> From<Box<dyn Iterator<Item = &'a str>>> for PathIter<'a> {
-    fn from(it: Box<dyn Iterator<Item = &'a str>>) -> PathIter<'a> {
-        PathIter { it, last: None }
     }
 }
 

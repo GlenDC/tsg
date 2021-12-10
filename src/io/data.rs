@@ -319,11 +319,11 @@ struct ValueIterInner<'a, 'b> {
 }
 
 impl<'a, 'b> ValueIter<'a, 'b> {
-    pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIter<'a, 'b>
+    pub fn new<T>(value: &'a Value, t: T) -> ValueIter<'a, 'b>
     where
         T: Into<PathIter<'b>>,
     {
-        let root_value_iter = ValueIterInner::new(value, path_iter);
+        let root_value_iter = ValueIterInner::new(value, t);
         let mut stack = VecDeque::with_capacity(1);
         stack.push_front(root_value_iter);
         ValueIter { stack }
@@ -355,13 +355,13 @@ impl<'a, 'b> Iterator for ValueIter<'a, 'b> {
 }
 
 impl<'a, 'b> ValueIterInner<'a, 'b> {
-    pub fn new<T>(value: &'a Value, path_iter: T) -> ValueIterInner<'a, 'b>
+    pub fn new<T>(value: &'a Value, t: T) -> ValueIterInner<'a, 'b>
     where
         T: Into<PathIter<'b>>,
     {
         ValueIterInner {
             root: value,
-            path: path_iter.into().collect(),
+            path: t.into().collect(),
             path_index: 0,
             recursive: false,
         }

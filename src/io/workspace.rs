@@ -2,9 +2,9 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::path::Path;
 
-use super::{File, FileFormat};
 use super::data::{Value, ValueIter};
-use super::path::{PathIter, PathComponent};
+use super::path::{PathComponent, PathIter};
+use super::{File, FileFormat};
 
 use anyhow::{anyhow, Result};
 
@@ -18,24 +18,17 @@ impl Workspace {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Workspace> {
         let path = path.as_ref();
 
-        let pages = load_files(
-            path.join("pages"),
-            &|file| match file.info().format() {
-                FileFormat::Html | FileFormat::Markdown | FileFormat::Rhai => true,
-                _ => false,
-            })?;
+        let pages = load_files(path.join("pages"), &|file| match file.info().format() {
+            FileFormat::Html | FileFormat::Markdown | FileFormat::Rhai => true,
+            _ => false,
+        })?;
 
-        let layouts = load_files(
-            path.join("layouts"),
-            &|file| match file.info().format() {
-                FileFormat::Html => true,
-                _ => false,
-            })?;
+        let layouts = load_files(path.join("layouts"), &|file| match file.info().format() {
+            FileFormat::Html => true,
+            _ => false,
+        })?;
 
-        let includes = load_files(
-            path.join("includes"),
-            &|_| true,
-        )?;
+        let includes = load_files(path.join("includes"), &|_| true)?;
 
         Ok(Workspace::new(pages, layouts, includes))
     }
@@ -46,6 +39,48 @@ impl Workspace {
             layouts,
             includes,
         };
+    }
+
+    pub fn page_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        self.page_or_value_iter(t).next()
+    }
+
+    pub fn page_or_value_iter<'a, 'b, T>(&'a mut self, t: T) -> FileOrValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        FileOrValueIter::new(&mut self.pages, t)
+    }
+
+    pub fn layout_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        self.layout_or_value_iter(t).next()
+    }
+
+    pub fn layout_or_value_iter<'a, 'b, T>(&'a mut self, t: T) -> FileOrValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        FileOrValueIter::new(&mut self.layouts, t)
+    }
+
+    pub fn include_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        self.include_or_value_iter(t).next()
+    }
+
+    pub fn include_or_value_iter<'a, 'b, T>(&'a mut self, t: T) -> FileOrValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
+    {
+        FileOrValueIter::new(&mut self.includes, t)
     }
 }
 
@@ -66,21 +101,23 @@ enum FileEntryOrValueInnerState<'a, 'b> {
 }
 
 struct FileEntryState<'a, 'b> {
-    path: Vec<PathComponent<'b>>,
-    entry_ref: &'a FileEntry,
-    path_index: usize,
-    recursive: bool,
+    pub path: Vec<PathComponent<'b>>,
+    pub entry_ref: &'a mut FileEntry,
+    pub path_index: usize,
+    pub recursive: bool,
 }
 
 impl FileEntry {
-    pub fn file_entry_or_value<'a, 'b, T>(&'a self, t: T) -> Option<FileOrValue<'a>>
-    where T: Into<PathIter<'b>>
+    pub fn file_entry_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
+    where
+        T: Into<PathIter<'b>>,
     {
         self.file_entry_or_value_iter(t).next()
     }
 
-    pub fn file_entry_or_value_iter<'a, 'b, T>(&'a self, t: T) -> FileOrValueIter<'a, 'b>
-    where T: Into<PathIter<'b>>
+    pub fn file_entry_or_value_iter<'a, 'b, T>(&'a mut self, t: T) -> FileOrValueIter<'a, 'b>
+    where
+        T: Into<PathIter<'b>>,
     {
         FileOrValueIter::new(self, t)
     }
@@ -106,7 +143,6 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&File) -> bool) -> Result<
         } else {
             let file = File::new(path)?;
             if filter(&file) {
-                // TODO: is this clone really needed?
                 files.insert(String::from(file.info().name()), FileEntry::File(file));
             }
         }
@@ -124,16 +160,17 @@ struct FileOrValueIterInner<'a, 'b> {
 }
 
 impl<'a, 'b> FileOrValueIter<'a, 'b> {
-    pub fn new<T>(entry: &'a FileEntry, path_iter: T) -> FileOrValueIter<'a, 'b>
+    pub fn new<T>(entry: &'a mut FileEntry, t: T) -> FileOrValueIter<'a, 'b>
     where
         T: Into<PathIter<'b>>,
     {
-        let root_value_iter = FileOrValueIterInner::new(FileEntryOrValueInnerState::FileEntry(FileEntryState{
-            path: path_iter.into().collect(),
-            path_index: 0,
-            entry_ref: entry,
-            recursive: false,
-        }));
+        let root_value_iter =
+            FileOrValueIterInner::new(FileEntryOrValueInnerState::FileEntry(FileEntryState {
+                path: t.into().collect(),
+                path_index: 0,
+                entry_ref: entry,
+                recursive: false,
+            }));
         let mut stack = VecDeque::with_capacity(1);
         stack.push_front(root_value_iter);
         FileOrValueIter { stack }
@@ -166,12 +203,152 @@ impl<'a, 'b> Iterator for FileOrValueIter<'a, 'b> {
 
 impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
     pub fn new(state: FileEntryOrValueInnerState<'a, 'b>) -> FileOrValueIterInner<'a, 'b> {
-        FileOrValueIterInner {
-            state,
-        }
+        FileOrValueIterInner { state }
     }
 
-    fn next_value(&mut self, stack: &mut VecDeque<FileOrValueIterInner<'a, 'b>>) -> Option<FileOrValue<'a>> {
-        None
+    fn next_value(
+        &mut self,
+        stack: &mut VecDeque<FileOrValueIterInner<'a, 'b>>,
+    ) -> Option<FileOrValue<'a>> {
+        let state = std::mem::replace(&mut self.state, FileEntryOrValueInnerState::None);
+        match state {
+            FileEntryOrValueInnerState::None => None,
+            FileEntryOrValueInnerState::ValueIter(mut it) => match it.next() {
+                None => {
+                    self.state = FileEntryOrValueInnerState::None;
+                    None
+                }
+                Some(value) => {
+                    self.state = FileEntryOrValueInnerState::ValueIter(it);
+                    return Some(FileOrValue::Value(value));
+                }
+            },
+            FileEntryOrValueInnerState::FileEntry(mut state) => {
+                while state.path_index >= state.path.len() {
+                    match state.path[state.path_index] {
+                        PathComponent::Name(name) => match state.entry_ref {
+                            FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
+                                None => {
+                                    self.state = FileEntryOrValueInnerState::None;
+                                    return None;
+                                }
+                                Some(meta) => {
+                                    let mut path = Vec::new();
+                                    if state.recursive {
+                                        path.push(PathComponent::AnyRecursive);
+                                    }
+                                    path.extend(state.path.into_iter().skip(state.path_index));
+                                    let value_it =
+                                        meta.value_iter(PathIter::wrap(path.into_iter()));
+                                    stack.push_back(FileOrValueIterInner::new(
+                                        FileEntryOrValueInnerState::ValueIter(value_it),
+                                    ));
+                                    return None;
+                                }
+                            },
+                            FileEntry::Dir(map) => {
+                                if !state.recursive {
+                                    match map.get_mut(name) {
+                                        None => return None,
+                                        Some(entry) => {
+                                            state.entry_ref = entry;
+                                            state.path_index += 1;
+                                            state.recursive = false;
+                                        }
+                                    }
+                                } else {
+                                    for (entry_name, entry) in map.iter_mut() {
+                                        if entry_name == name {
+                                            stack.push_front(FileOrValueIterInner::new(
+                                                FileEntryOrValueInnerState::FileEntry(
+                                                    FileEntryState {
+                                                        path: state.path[state.path_index + 1..]
+                                                            .to_vec(),
+                                                        entry_ref: entry,
+                                                        path_index: 0,
+                                                        recursive: false,
+                                                    },
+                                                ),
+                                            ));
+                                        } else {
+                                            stack.push_back(FileOrValueIterInner::new(
+                                                FileEntryOrValueInnerState::FileEntry(
+                                                    FileEntryState {
+                                                        path: state.path[state.path_index..]
+                                                            .to_vec(),
+                                                        entry_ref: entry,
+                                                        path_index: 0,
+                                                        recursive: true,
+                                                    },
+                                                ),
+                                            ));
+                                        }
+                                    }
+                                    return None;
+                                }
+                            }
+                        },
+                        PathComponent::Any => match state.entry_ref {
+                            FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
+                                None => {
+                                    self.state = FileEntryOrValueInnerState::None;
+                                    return None;
+                                }
+                                Some(meta) => {
+                                    let it = state.path.into_iter().skip(state.path_index);
+                                    let value_it = meta.value_iter(PathIter::wrap(it));
+                                    stack.push_back(FileOrValueIterInner::new(
+                                        FileEntryOrValueInnerState::ValueIter(value_it),
+                                    ));
+                                    return None;
+                                }
+                            },
+                            FileEntry::Dir(map) => {
+                                for entry in map.values_mut() {
+                                    stack.push_back(FileOrValueIterInner::new(
+                                        FileEntryOrValueInnerState::FileEntry(FileEntryState {
+                                            path: state.path[state.path_index + 1..].to_vec(),
+                                            entry_ref: entry,
+                                            path_index: 0,
+                                            recursive: false,
+                                        }),
+                                    ));
+                                }
+                                return None;
+                            }
+                        },
+                        PathComponent::AnyRecursive => match state.entry_ref {
+                            FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
+                                None => {
+                                    return None;
+                                }
+                                Some(meta) => {
+                                    let it = state.path.into_iter().skip(state.path_index);
+                                    let value_it = meta.value_iter(PathIter::wrap(it));
+                                    stack.push_back(FileOrValueIterInner::new(
+                                        FileEntryOrValueInnerState::ValueIter(value_it),
+                                    ));
+                                    return None;
+                                }
+                            },
+                            FileEntry::Dir(map) => {
+                                for entry in map.values_mut() {
+                                    stack.push_back(FileOrValueIterInner::new(
+                                        FileEntryOrValueInnerState::FileEntry(FileEntryState {
+                                            path: state.path[state.path_index + 1..].to_vec(),
+                                            entry_ref: entry,
+                                            path_index: 0,
+                                            recursive: true,
+                                        }),
+                                    ));
+                                }
+                                return None;
+                            }
+                        },
+                    }
+                }
+                None
+            }
+        }
     }
 }

@@ -228,10 +228,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                     match state.path[state.path_index] {
                         PathComponent::Name(name) => match state.entry_ref {
                             FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
-                                None => {
-                                    self.state = FileEntryOrValueInnerState::None;
-                                    return None;
-                                }
+                                None => return None,
                                 Some(meta) => {
                                     let mut path = Vec::new();
                                     if state.recursive {

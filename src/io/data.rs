@@ -377,10 +377,11 @@ impl<'a, 'b> ValueIterInner<'a, 'b> {
                                 None
                             }),
                         Value::Mapping(map) => {
-                            let result = map.get(name);
+                            let name = name.to_lowercase();
+                            let result = map.get(&name);
                             if self.recursive {
                                 for (key, value) in map {
-                                    if result.is_some() && key == name {
+                                    if result.is_some() && key == &name {
                                         continue;
                                     }
                                     stack.push_back(ValueIterInner {

@@ -135,13 +135,13 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&FileInfo) -> bool) -> Res
         if path.is_dir() {
             let dir = load_files(&path, filter)?;
             match path.file_name().and_then(|n| n.to_str()) {
-                Some(dir_name) => files.insert(String::from(dir_name), dir),
+                Some(dir_name) => files.insert(dir_name.to_lowercase(), dir),
                 None => return Err(anyhow!("failed to get dirname for dir entry")),
             };
         } else {
             let file_info: FileInfo = (&path).try_into()?;
             if filter(&file_info) {
-                files.insert(String::from(file_info.name()), FileEntry::File(LazyFile::FileInfo(file_info)));
+                files.insert(file_info.name().to_lowercase(), FileEntry::File(LazyFile::FileInfo(file_info)));
             }
         }
     }
@@ -242,8 +242,9 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                                 }
                             },
                             FileEntry::Dir(map) => {
+                                let name = name.to_lowercase();
                                 if !state.recursive {
-                                    match map.get_mut(name) {
+                                    match map.get_mut(&name) {
                                         None => return None,
                                         Some(entry) => {
                                             state.entry_ref = entry;
@@ -253,7 +254,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                                     }
                                 } else {
                                     for (entry_name, entry) in map.iter_mut() {
-                                        if entry_name == name {
+                                        if entry_name == &name {
                                             stack.push_front(FileOrValueIterInner::new(
                                                 FileEntryOrValueInnerState::FileEntry(
                                                     FileEntryState {

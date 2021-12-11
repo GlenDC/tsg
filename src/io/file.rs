@@ -1,9 +1,9 @@
+use core::ops::Range;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::fs;
 use std::path::Path;
-use core::ops::Range;
 
 use anyhow::{anyhow, Result};
 use regex::Regex;
@@ -77,53 +77,23 @@ pub struct FileInfo {
 }
 
 impl FileInfo {
-    pub fn kind(&self) -> FileKind {
-        self.kind
-    }
-
-    pub fn path(&self) -> &str {
-        &self.path
-    }
-
-    pub fn directory(&self) -> Option<&str> {
-        self.directory.as_ref().and_then(|range| Some(&self.path[range.start..range.end]))
-    }
-
-    pub fn name(&self) -> &str {
-        &self.path[self.name.start..self.name.end]
-    }
-
-    pub fn locale(&self) -> Option<&FileLocale> {
-        self.locale.as_ref()
-    }
-
-    pub fn format(&self) -> FileFormat {
-        self.format
-    }
-}
-
-impl TryFrom<&Path> for FileInfo {
-    type Error = FileInfoError;
-
-    fn try_from(path: &Path) -> std::result::Result<FileInfo, FileInfoError> {
+    pub fn new(raw_path: &str) -> std::result::Result<FileInfo, FileInfoError> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"(?i)(?P<kind>includes|layouts|pages)(?P<dir>((/|\\)[^/\\]+)+)?(/|\\)(?P<name>\s+)(?P<locale>(\.[a-z\-_\d]+)+)?(\.(?P<ext>[a-z]+)$").unwrap();
         }
         // extract raw name, locale (opt) and extension (indicates file format)
-        let (raw_kind, raw_dir, raw_name, raw_locale_opt, raw_ext, path) = match path.to_str() {
-            Some(path) => match RE.captures(path) {
+        let (raw_kind, raw_dir, raw_name, raw_locale_opt, raw_ext, path) =
+            match RE.captures(raw_path) {
                 Some(m) => (
                     m.name("kind").unwrap(),
                     m.name("dir"), // dir is optional, and not defined if direct in root of kind
                     m.name("name").unwrap(),
                     m.name("locale"), // also the locale can be optional within this pattern
                     m.name("ext").unwrap(),
-                    String::from(path),
+                    String::from(raw_path),
                 ),
-                None => return Err(FileInfoError::UnexpectedFilePath(String::from(path))),
-            },
-            None => return Err(FileInfoError::InvalidPath),
-        };
+                None => return Err(FileInfoError::UnexpectedFilePath(String::from(raw_path))),
+            };
         // "parse" the file format from the file extension
         let file_format = FileFormat::from_str(raw_ext.as_str())?;
         // optionally "parse" the locale from the locale part
@@ -143,6 +113,43 @@ impl TryFrom<&Path> for FileInfo {
             locale: locale,
             format: file_format,
         })
+    }
+
+    pub fn kind(&self) -> FileKind {
+        self.kind
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    pub fn directory(&self) -> Option<&str> {
+        self.directory
+            .as_ref()
+            .and_then(|range| Some(&self.path[range.start..range.end]))
+    }
+
+    pub fn name(&self) -> &str {
+        &self.path[self.name.start..self.name.end]
+    }
+
+    pub fn locale(&self) -> Option<&FileLocale> {
+        self.locale.as_ref()
+    }
+
+    pub fn format(&self) -> FileFormat {
+        self.format
+    }
+}
+
+impl TryFrom<&Path> for FileInfo {
+    type Error = FileInfoError;
+
+    fn try_from(path: &Path) -> std::result::Result<FileInfo, FileInfoError> {
+        match path.to_str() {
+            Some(path_str) => FileInfo::new(path_str),
+            None => Err(FileInfoError::InvalidPath),
+        }
     }
 }
 
@@ -168,56 +175,29 @@ impl fmt::Display for FileInfoError {
 }
 
 pub struct File {
-    data: Option<FileData>,
     file_info: FileInfo,
+    meta: Option<Meta>,
+    content: Vec<u8>,
 }
 
 impl File {
-    pub fn new<P: AsRef<Path>>(path: P) -> Result<File> {
+    pub fn read<P: AsRef<Path>>(path: P) -> Result<File> {
         let path = path.as_ref();
         let file_info: FileInfo = path.try_into()?;
-        Ok(File {
-            data: None,
-            file_info: file_info,
-        })
-    }
-
-    pub fn content(&mut self) -> Result<&[u8]> {
-        Ok(&self.data()?.content[..])
-    }
-
-    pub fn meta(&mut self) -> Result<Option<&Meta>> {
-        Ok(match &self.data()?.meta {
-            None => None,
-            Some(meta) => Some(&meta),
-        })
+        let mut content = fs::read(&path)?;
+        let meta = Meta::extract(file_info.format(), &mut content)?;
+        Ok(File { file_info, meta, content })
     }
 
     pub fn info(&self) -> &FileInfo {
         &self.file_info
     }
 
-    fn data(&mut self) -> Result<&FileData> {
-        if self.data.is_none() {
-            self.data = Some(FileData::read(self.file_info.path(), self.file_info.format)?);
-        }
-        Ok(self.data.as_ref().unwrap())
+    pub fn meta(&self) -> Option<&Meta> {
+        self.meta.as_ref()
     }
-}
 
-struct FileData {
-    content: Vec<u8>,
-    meta: Option<Meta>,
-}
-
-impl FileData {
-    pub fn read<P: AsRef<Path>>(path: P, file_format: FileFormat) -> Result<FileData> {
-        let path = path.as_ref();
-        let mut content = fs::read(&path)?;
-        let meta = Meta::extract(file_format, &mut content)?;
-        Ok(FileData {
-            content: content,
-            meta: meta,
-        })
+    pub fn content(&self) -> &[u8] {
+        &self.content[..]
     }
 }

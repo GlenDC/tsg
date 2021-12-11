@@ -2,9 +2,9 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::path::Path;
 
-use super::{Value, ValueIter};
 use super::path::{PathComponent, PathIter};
 use super::{File, FileFormat};
+use super::{Value, ValueIter};
 
 use anyhow::{anyhow, Result};
 
@@ -141,7 +141,7 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&File) -> bool) -> Result<
                 None => return Err(anyhow!("failed to get dirname for dir entry")),
             };
         } else {
-            let file = File::new(path)?;
+            let file = File::read(path)?;
             if filter(&file) {
                 files.insert(String::from(file.info().name()), FileEntry::File(file));
             }
@@ -227,7 +227,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                 while state.path_index >= state.path.len() {
                     match state.path[state.path_index] {
                         PathComponent::Name(name) => match state.entry_ref {
-                            FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
+                            FileEntry::File(file) => match file.meta() {
                                 None => return None,
                                 Some(meta) => {
                                     let mut path = Vec::new();
@@ -286,7 +286,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                             }
                         },
                         PathComponent::Any => match state.entry_ref {
-                            FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
+                            FileEntry::File(file) => match file.meta() {
                                 None => {
                                     self.state = FileEntryOrValueInnerState::None;
                                     return None;
@@ -315,7 +315,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                             }
                         },
                         PathComponent::AnyRecursive => match state.entry_ref {
-                            FileEntry::File(file) => match file.meta().ok().and_then(|m| m) {
+                            FileEntry::File(file) => match file.meta() {
                                 None => {
                                     return None;
                                 }

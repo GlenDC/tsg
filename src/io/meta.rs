@@ -41,13 +41,6 @@ impl Meta {
         self.content.value_iter(t)
     }
 
-    pub fn value_mut<'a, 'b, T>(&'a mut self, t: T) -> Option<&'a mut Value>
-    where
-        T: Into<PathIter<'b>>,
-    {
-        self.content.value_mut(t)
-    }
-
     fn extract_html(content: &mut Vec<u8>) -> Result<Option<Meta>> {
         lazy_static! {
             static ref RE: Regex = Regex::new(

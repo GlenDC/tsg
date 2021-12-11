@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use std::error::Error;
 use std::fmt;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use anyhow::{anyhow, Result};
 use regex::Regex;
@@ -54,7 +54,7 @@ impl FileFormat {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FileLocale {
     raw_str: String,
 }
@@ -67,6 +67,7 @@ impl FileLocale {
     }
 }
 
+#[derive(Clone)]
 pub struct FileInfo {
     kind: FileKind,
     path: String,
@@ -153,6 +154,17 @@ impl TryFrom<&Path> for FileInfo {
     }
 }
 
+impl TryFrom<&PathBuf> for FileInfo {
+    type Error = FileInfoError;
+
+    fn try_from(path: &PathBuf) -> std::result::Result<FileInfo, FileInfoError> {
+        match path.to_str() {
+            Some(path_str) => FileInfo::new(path_str),
+            None => Err(FileInfoError::InvalidPath),
+        }
+    }
+}
+
 #[derive(Debug)]
 pub enum FileInfoError {
     UnexpectedFileFormat(String),
@@ -184,9 +196,7 @@ impl File {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<File> {
         let path = path.as_ref();
         let file_info: FileInfo = path.try_into()?;
-        let mut content = fs::read(&path)?;
-        let meta = Meta::extract(file_info.format(), &mut content)?;
-        Ok(File { file_info, meta, content })
+        file_info.try_into()
     }
 
     pub fn info(&self) -> &FileInfo {
@@ -199,5 +209,15 @@ impl File {
 
     pub fn content(&self) -> &[u8] {
         &self.content[..]
+    }
+}
+
+impl TryFrom<FileInfo> for File {
+    type Error = anyhow::Error;
+
+    fn try_from(file_info: FileInfo) -> Result<File> {
+        let mut content = fs::read(file_info.path())?;
+        let meta = Meta::extract(file_info.format(), &mut content)?;
+        Ok(File { file_info, meta, content })
     }
 }

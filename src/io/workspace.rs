@@ -3,7 +3,7 @@ use std::fs;
 use std::path::Path;
 
 use super::path::{PathComponent, PathIter};
-use super::{File, FileFormat};
+use super::{File, FileFormat, FileInfo};
 use super::{Value, ValueIter};
 
 use anyhow::{anyhow, Result};
@@ -18,27 +18,23 @@ impl Workspace {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Workspace> {
         let path = path.as_ref();
 
-        let pages = load_files(path.join("pages"), &|file| match file.info().format() {
+        let pages = load_files(path.join("pages"), &|file_info| match file_info.format() {
             FileFormat::Html | FileFormat::Markdown | FileFormat::Rhai => true,
             _ => false,
         })?;
 
-        let layouts = load_files(path.join("layouts"), &|file| match file.info().format() {
+        let layouts = load_files(path.join("layouts"), &|file_info| match file_info.format() {
             FileFormat::Html => true,
             _ => false,
         })?;
 
         let includes = load_files(path.join("includes"), &|_| true)?;
 
-        Ok(Workspace::new(pages, layouts, includes))
-    }
-
-    pub fn new(pages: FileEntry, layouts: FileEntry, includes: FileEntry) -> Workspace {
-        return Workspace {
+        Ok(Workspace {
             pages,
             layouts,
             includes,
-        };
+        })
     }
 
     pub fn page_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
@@ -84,9 +80,27 @@ impl Workspace {
     }
 }
 
-pub enum FileEntry {
-    File(File),
+enum FileEntry {
+    File(LazyFile),
     Dir(HashMap<String, FileEntry>),
+}
+
+enum LazyFile {
+    FileInfo(FileInfo),
+    File(File),
+}
+
+impl LazyFile {
+    pub fn read_or_get_file(&mut self) -> Result<&File> {
+        match self {
+            LazyFile::File(file) => Ok(file),
+            LazyFile::FileInfo(info) => {
+                let file = info.clone().try_into()?;
+                *self = LazyFile::File(file);
+                self.read_or_get_file()
+            },
+        }
+    }
 }
 
 pub enum FileOrValue<'a> {
@@ -107,23 +121,7 @@ struct FileEntryState<'a, 'b> {
     pub recursive: bool,
 }
 
-impl FileEntry {
-    pub fn file_entry_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
-    where
-        T: Into<PathIter<'b>>,
-    {
-        self.file_entry_or_value_iter(t).next()
-    }
-
-    pub fn file_entry_or_value_iter<'a, 'b, T>(&'a mut self, t: T) -> FileOrValueIter<'a, 'b>
-    where
-        T: Into<PathIter<'b>>,
-    {
-        FileOrValueIter::new(self, t)
-    }
-}
-
-fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&File) -> bool) -> Result<FileEntry> {
+fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&FileInfo) -> bool) -> Result<FileEntry> {
     let mut files = HashMap::new();
 
     let dir = dir.as_ref();
@@ -141,9 +139,9 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&File) -> bool) -> Result<
                 None => return Err(anyhow!("failed to get dirname for dir entry")),
             };
         } else {
-            let file = File::read(path)?;
-            if filter(&file) {
-                files.insert(String::from(file.info().name()), FileEntry::File(file));
+            let file_info: FileInfo = (&path).try_into()?;
+            if filter(&file_info) {
+                files.insert(String::from(file_info.name()), FileEntry::File(LazyFile::FileInfo(file_info)));
             }
         }
     }
@@ -160,7 +158,7 @@ struct FileOrValueIterInner<'a, 'b> {
 }
 
 impl<'a, 'b> FileOrValueIter<'a, 'b> {
-    pub fn new<T>(entry: &'a mut FileEntry, t: T) -> FileOrValueIter<'a, 'b>
+    fn new<T>(entry: &'a mut FileEntry, t: T) -> FileOrValueIter<'a, 'b>
     where
         T: Into<PathIter<'b>>,
     {
@@ -227,7 +225,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                 while state.path_index >= state.path.len() {
                     match state.path[state.path_index] {
                         PathComponent::Name(name) => match state.entry_ref {
-                            FileEntry::File(file) => match file.meta() {
+                            FileEntry::File(file) => match file.read_or_get_file().ok().and_then(|file| file.meta()) {
                                 None => return None,
                                 Some(meta) => {
                                     let mut path = Vec::new();
@@ -286,7 +284,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                             }
                         },
                         PathComponent::Any => match state.entry_ref {
-                            FileEntry::File(file) => match file.meta() {
+                            FileEntry::File(file) => match file.read_or_get_file().ok().and_then(|file| file.meta()) {
                                 None => {
                                     self.state = FileEntryOrValueInnerState::None;
                                     return None;
@@ -315,7 +313,7 @@ impl<'a, 'b> FileOrValueIterInner<'a, 'b> {
                             }
                         },
                         PathComponent::AnyRecursive => match state.entry_ref {
-                            FileEntry::File(file) => match file.meta() {
+                            FileEntry::File(file) => match file.read_or_get_file().ok().and_then(|file| file.meta()) {
                                 None => {
                                     return None;
                                 }

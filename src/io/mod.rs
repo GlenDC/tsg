@@ -1,4 +1,5 @@
 pub mod data;
+pub use data::{Value, ValueIter};
 
 mod file;
 pub use file::{File, FileFormat, FileKind, FileLocale};

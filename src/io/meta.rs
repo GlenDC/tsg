@@ -4,7 +4,7 @@ use anyhow::Result;
 use regex::bytes::Regex;
 use serde_yaml;
 
-use super::data::{Value, ValueIter};
+use super::{Value, ValueIter};
 use super::path::PathIter;
 
 pub struct Meta {
@@ -25,6 +25,10 @@ impl Meta {
             // other file formats do not support Meta data, and thus we can immediately return None
             FileFormat::Rhai | FileFormat::Bash => Ok(None),
         }
+    }
+
+    pub fn as_value<'a>(&'a self) -> &'a Value {
+        &self.content
     }
 
     pub fn value<'a, 'b, T>(&'a self, t: T) -> Option<&'a Value>

@@ -2,7 +2,7 @@ use std::collections::{HashMap, VecDeque};
 use std::fs;
 use std::path::Path;
 
-use super::data::{Value, ValueIter};
+use super::{Value, ValueIter};
 use super::path::{PathComponent, PathIter};
 use super::{File, FileFormat};
 

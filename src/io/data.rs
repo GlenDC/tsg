@@ -5,6 +5,18 @@ use serde_yaml;
 
 use super::path::{PathComponent, PathIter};
 
+pub fn first_value<'a, 'b, I>(path_it: I, values: &'a [Value]) -> Option<&'a Value>
+    where I: Into<PathIter<'b>>
+{
+    let path: Vec<PathComponent<'b>> = path_it.into().collect();
+    for value in values {
+        if let Some(value) = value.value(PathIter::wrap(path.clone().into_iter())) {
+            return Some(value);
+        }
+    }
+    None
+}
+
 #[derive(Debug, Clone)]
 pub enum Value {
     Null,

@@ -1,6 +1,6 @@
 use std::collections::{HashMap, VecDeque};
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use super::path::{PathComponent, PathIter};
 use super::{File, FileFormat, FileInfo};
@@ -9,6 +9,8 @@ use super::{Value, ValueIter};
 use anyhow::{anyhow, Result};
 
 pub struct Workspace {
+    root: PathBuf,
+    assets: Vec<PathBuf>,
     pages: FileEntry,
     layouts: FileEntry,
     includes: FileEntry,
@@ -17,6 +19,8 @@ pub struct Workspace {
 impl Workspace {
     pub fn read<P: AsRef<Path>>(path: P) -> Result<Workspace> {
         let path = path.as_ref();
+
+        let assets = list_files(path.join("assets"))?;
 
         let pages = load_files(path.join("pages"), &|file_info| match file_info.format() {
             FileFormat::Html | FileFormat::Markdown | FileFormat::Rhai => true,
@@ -31,10 +35,20 @@ impl Workspace {
         let includes = load_files(path.join("includes"), &|_| true)?;
 
         Ok(Workspace {
+            root: PathBuf::from(path),
+            assets,
             pages,
             layouts,
             includes,
         })
+    }
+
+    pub fn root(&self) -> &Path {
+        self.root.as_path()
+    }
+
+    pub fn assets(&self) -> &[PathBuf] {
+        &self.assets[..]
     }
 
     pub fn page_or_value<'a, 'b, T>(&'a mut self, t: T) -> Option<FileOrValue<'a>>
@@ -147,6 +161,36 @@ fn load_files<P: AsRef<Path>>(dir: P, filter: &dyn Fn(&FileInfo) -> bool) -> Res
     }
 
     Ok(FileEntry::Dir(files))
+}
+
+fn list_files<P: AsRef<Path>>(dir: P) -> Result<Vec<PathBuf>> {
+    let mut file_paths = Vec::new();
+
+    let root = dir.as_ref();
+    if !root.exists() {
+        return Ok(file_paths);
+    }
+
+    let mut dirs_to_read = vec![PathBuf::from(root)];
+    loop {
+        match dirs_to_read.pop() {
+            None => break,
+            Some(dir) => { 
+                for entry in fs::read_dir(dir)? {
+                    let entry = entry?;
+                    let path = entry.path();
+                    if path.is_dir() {
+                        dirs_to_read.push(PathBuf::from(path));
+                    } else {
+                        let path = path.strip_prefix(root)?;
+                        file_paths.push(PathBuf::from(path));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(file_paths)
 }
 
 pub struct FileOrValueIter<'a, 'b> {
